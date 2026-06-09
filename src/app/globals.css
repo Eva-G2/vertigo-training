@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root,
+[data-theme="light"] {
+  --color-blue: #2949cc;
+  --color-cyan: #10a69c;
+  --color-dark-blue: #111d4d;
+  --color-yellow: #fff600;
+  --radius-card: 20px;
+  --border-width: 3px;
+  --background: #ffffff;
+  --foreground: #2949cc;
+  --card: #ffffff;
+  --border-color: #2949cc;
+  --chrome-lang-bg: #2949cc;
+  --chrome-lang-fg: #ffffff;
+  --chrome-sound-bg: #10a69c;
+  --chrome-sound-fg: #ffffff;
+  --chrome-theme-bg: #111d4d;
+  --chrome-theme-fg: #fff600;
+  --btn-hover-bg: #2949cc;
+  --btn-hover-fg: #ffffff;
+  --input-filled-bg: #10a69c;
+  --input-filled-fg: #111d4d;
+  --modal-selected-bg: #10a69c;
+  --modal-selected-fg: #ffffff;
+  --overlay-marker: #2949cc;
+}
+
+[data-theme="dark"] {
+  --background: #0d1b3e;
+  --foreground: #fff600;
+  --card: #0d1b3e;
+  --border-color: #fff600;
+  --chrome-lang-bg: #fff600;
+  --chrome-lang-fg: #0d1b3e;
+  --chrome-sound-bg: #10a69c;
+  --chrome-sound-fg: #ffffff;
+  --chrome-theme-bg: #ffffff;
+  --chrome-theme-fg: #2949cc;
+  --btn-hover-bg: #fff600;
+  --btn-hover-fg: #0d1b3e;
+  --input-filled-bg: #10a69c;
+  --input-filled-fg: #0d1b3e;
+  --modal-selected-bg: #10a69c;
+  --modal-selected-fg: #ffffff;
+  --overlay-marker: #fff600;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-blue: #2949cc;
+  --color-cyan: #10a69c;
+  --color-dark-blue: #111d4d;
+  --color-yellow: #fff600;
+  --color-border: var(--border-color);
+  --font-sans: var(--font-noto-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-noto-sans), "Noto Sans", sans-serif;
+}
