@@ -1,12 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Step, StepMetrics } from "@/lib/types";
 import { CameraFeed } from "./CameraFeed";
+import { CameraPermissionModal } from "./CameraPermissionModal";
+import { SmoothPursuitGameOverlay } from "./SmoothPursuitGameOverlay";
+import { useApp } from "./providers/AppProvider";
+import { useTestContext } from "./providers/TestContext";
+import { t } from "@/lib/i18n";
+import { EyeTrackingProvider } from "@/state";
+import {
+  TrackingEnabledVideo,
+  type PrepCalibrationPayload,
+} from "@/components/tracking";
 
 type HeadExerciseProps = {
   step: Step;
   onComplete: (metrics: StepMetrics) => void;
+  trackingEnabled?: boolean;
+  onRegisterHideTracking?: (hide: () => void) => void;
 };
 
 const TARGET_ANGLES: Record<Step, number> = {
@@ -18,9 +30,18 @@ const TARGET_ANGLES: Record<Step, number> = {
 const TOLERANCE = 8;
 const SESSION_DURATION_MS = 8000;
 
-export function HeadExercise({ step, onComplete }: HeadExerciseProps) {
+function HeadExerciseInner({
+  step,
+  onComplete,
+  trackingEnabled = false,
+  onRegisterHideTracking,
+}: HeadExerciseProps) {
+  const { state } = useApp();
+  const { locale } = state;
+  const { calibration, isCalibrated } = useTestContext();
   const [progress, setProgress] = useState(0);
   const [isActive, setIsActive] = useState(false);
+  const [trackingAreaVisible, setTrackingAreaVisible] = useState(true);
   const metricsRef = useRef({
     samples: 0,
     inTarget: 0,
@@ -32,26 +53,50 @@ export function HeadExercise({ step, onComplete }: HeadExerciseProps) {
 
   const target = TARGET_ANGLES[step];
 
-  const finish = useCallback(() => {
-    if (completedRef.current) return;
-    completedRef.current = true;
+  const prepCalibration = useMemo((): PrepCalibrationPayload | null => {
+    if (
+      !trackingEnabled ||
+      !isCalibrated ||
+      calibration.kL == null ||
+      calibration.kR == null ||
+      calibration.kLY == null ||
+      calibration.kRY == null
+    ) {
+      return null;
+    }
 
-    const { samples, inTarget, angleSum } = metricsRef.current;
-    const completionPct = Math.min(100, Math.round(progress));
-    const accuracyPct =
-      samples > 0 ? Math.round((inTarget / samples) * 100) : 0;
-    const averageAngleDeg =
-      samples > 0 ? Math.round(Math.abs(angleSum / samples)) : 0;
+    return {
+      kL: calibration.kL,
+      kR: calibration.kR,
+      kLY: calibration.kLY,
+      kRY: calibration.kRY,
+      leftBaseline: calibration.leftBaseline,
+      rightBaseline: calibration.rightBaseline,
+    };
+  }, [calibration, isCalibrated, trackingEnabled]);
 
-    onComplete({
-      completionPct: completionPct || 85,
-      accuracyPct: accuracyPct || 75,
-      averageAngleDeg: averageAngleDeg || target,
-    });
-  }, [onComplete, progress, target]);
+  const finish = useCallback(
+    (completionPct = 100) => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+
+      const { samples, inTarget, angleSum } = metricsRef.current;
+      const accuracyPct =
+        samples > 0 ? Math.round((inTarget / samples) * 100) : 0;
+      const averageAngleDeg =
+        samples > 0 ? Math.round(Math.abs(angleSum / samples)) : 0;
+
+      onComplete({
+        completionPct: Math.min(100, Math.round(completionPct)) || 85,
+        accuracyPct: accuracyPct || 75,
+        averageAngleDeg: averageAngleDeg || target,
+      });
+    },
+    [onComplete, target],
+  );
 
   useEffect(() => {
-    if (!isActive) return;
+    if (trackingEnabled || !isActive) return;
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - (startTimeRef.current ?? Date.now());
@@ -66,24 +111,33 @@ export function HeadExercise({ step, onComplete }: HeadExerciseProps) {
 
       if (pct >= 100) {
         clearInterval(interval);
-        finish();
+        finish(pct);
       }
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isActive, target, finish]);
+  }, [finish, isActive, target, trackingEnabled]);
+
+  const handleRecordingStart = useCallback(() => {
+    setIsActive(true);
+    completedRef.current = false;
+    metricsRef.current = { samples: 0, inTarget: 0, angleSum: 0 };
+  }, []);
+
+  const handleSessionEnd = useCallback(() => {
+    finish(progress || 100);
+  }, [finish, progress]);
 
   const handlePointerDown = () => {
-    if (!isActive) {
-      setIsActive(true);
-      startTimeRef.current = Date.now();
-      completedRef.current = false;
-      metricsRef.current = { samples: 0, inTarget: 0, angleSum: 0 };
-    }
+    if (trackingEnabled || isActive) return;
+    setIsActive(true);
+    startTimeRef.current = Date.now();
+    completedRef.current = false;
+    metricsRef.current = { samples: 0, inTarget: 0, angleSum: 0 };
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isActive) return;
+    if (!isActive || trackingEnabled) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const deltaY = e.clientY - (rect.top + rect.height / 2);
     const deltaX = e.clientX - (rect.left + rect.width / 2);
@@ -96,11 +150,45 @@ export function HeadExercise({ step, onComplete }: HeadExerciseProps) {
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
       <div
-        className="relative w-full cursor-grab active:cursor-grabbing"
+        className={`relative w-full ${
+          trackingEnabled ? "" : "cursor-grab active:cursor-grabbing"
+        }`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
       >
-        <CameraFeed showBottomMarker />
+        {trackingEnabled ? (
+          <div className={trackingAreaVisible ? "contents" : "hidden"}>
+            <TrackingEnabledVideo
+              prepCalibration={prepCalibration}
+              sessionLabel="Stage 1 Step 1 training"
+              autoStartRecording={false}
+              analyticsTitle={t(locale, "viewTrackingAnalytics")}
+              analyticsToggleLabel={t(locale, "viewTrackingAnalytics")}
+              analyticsCloseLabel={t(locale, "closeAnalytics")}
+              cameraDeniedLabel={t(locale, "cameraDenied")}
+              cameraUnavailableLabel={t(locale, "cameraUnavailable")}
+              cameraLoadingLabel={t(locale, "cameraLoading")}
+              gameLayer={
+                <SmoothPursuitGameOverlay
+                  onRecordingStart={handleRecordingStart}
+                  onSessionEnd={handleSessionEnd}
+                  onProgress={setProgress}
+                  onVisibleChange={setTrackingAreaVisible}
+                  onRegisterHide={(hide) => onRegisterHideTracking?.(hide)}
+                />
+              }
+              renderCameraPermissionModal={({ onAllow, onDeny }) => (
+                <CameraPermissionModal
+                  locale={locale}
+                  onAllow={onAllow}
+                  onDeny={onDeny}
+                />
+              )}
+            />
+          </div>
+        ) : (
+          <CameraFeed showBottomMarker />
+        )}
       </div>
 
       <div className="w-full">
@@ -114,7 +202,7 @@ export function HeadExercise({ step, onComplete }: HeadExerciseProps) {
             style={{ width: `${progress}%` }}
           />
         </div>
-        {!isActive && (
+        {!isActive && !trackingEnabled && (
           <p className="mt-3 text-center text-sm text-foreground/60">
             Tap the camera view to begin the exercise
           </p>
@@ -122,4 +210,16 @@ export function HeadExercise({ step, onComplete }: HeadExerciseProps) {
       </div>
     </div>
   );
+}
+
+export function HeadExercise(props: HeadExerciseProps) {
+  if (props.trackingEnabled) {
+    return (
+      <EyeTrackingProvider>
+        <HeadExerciseInner {...props} />
+      </EyeTrackingProvider>
+    );
+  }
+
+  return <HeadExerciseInner {...props} />;
 }

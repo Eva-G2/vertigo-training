@@ -14,6 +14,23 @@ export type StepMetrics = {
   averageAngleDeg: number;
 };
 
+export type CalibrationStatus = "PENDING" | "CALIBRATED";
+
+export type PupilBaseline = {
+  x: number;
+  y: number;
+};
+
+export type CalibrationData = {
+  status: CalibrationStatus;
+  kL: number | null;
+  kR: number | null;
+  kLY: number | null;
+  kRY: number | null;
+  leftBaseline: PupilBaseline | null;
+  rightBaseline: PupilBaseline | null;
+};
+
 export type AppState = {
   locale: Locale;
   theme: Theme;

@@ -76,7 +76,7 @@ export function AppShell({
           <ChromeButton
             id="theme-btn"
             onClick={toggleTheme}
-            bg="var(--chrome-theme-bg)"
+            bg={isDark ? "var(--chrome-theme-bg)" : "#111D4D"}
             title={isDark ? "Light mode" : "Dark mode"}
           >
             {isDark ? <LightModeIcon /> : <DarkModeIcon />}

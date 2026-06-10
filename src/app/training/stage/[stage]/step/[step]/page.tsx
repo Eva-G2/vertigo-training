@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { CongratsModal } from "@/components/CongratsModal";
@@ -22,6 +22,7 @@ export default function StepTrainingPage() {
   const [showCongrats, setShowCongrats] = useState(false);
   const [metrics, setMetrics] = useState<StepMetrics | null>(null);
   const [exerciseDone, setExerciseDone] = useState(false);
+  const hideTrackingRef = useRef<(() => void) | null>(null);
 
   const handleComplete = useCallback(
     (m: StepMetrics) => {
@@ -34,6 +35,7 @@ export default function StepTrainingPage() {
 
   const handleNext = () => {
     if (!exerciseDone || !metrics) return;
+    hideTrackingRef.current?.();
     setShowCongrats(true);
   };
 
@@ -57,7 +59,14 @@ export default function StepTrainingPage() {
         </h1>
 
         <div className="flex flex-1 flex-col items-center">
-          <HeadExercise step={step} onComplete={handleComplete} />
+          <HeadExercise
+            step={step}
+            onComplete={handleComplete}
+            trackingEnabled={stage === 1 && step === 1}
+            onRegisterHideTracking={(hide) => {
+              hideTrackingRef.current = hide;
+            }}
+          />
         </div>
 
         <div className="flex justify-end">

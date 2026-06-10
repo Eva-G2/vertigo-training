@@ -30,7 +30,13 @@ export default function StepDemoPage() {
         </h1>
 
         <div className="flex flex-1 flex-col items-center">
-          <VideoDemo />
+          <VideoDemo
+            videoSrc={
+              stage === 1 && step === 1
+                ? "/videos/S1S1(vertical).mp4"
+                : undefined
+            }
+          />
         </div>
 
         <div className="flex justify-end">

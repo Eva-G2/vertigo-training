@@ -14,6 +14,7 @@ type Copy = {
   signupSuccess: string;
   stagePrepare: string;
   stageStep: string;
+  stage1Step1Title: string;
   continue: string;
   next: string;
   congratsTitle: string;
@@ -43,6 +44,13 @@ type Copy = {
   cameraDenied: string;
   cameraUnavailable: string;
   cameraLoading: string;
+  calibrationRequired: string;
+  calibrationComplete: string;
+  viewTrackingAnalytics: string;
+  closeAnalytics: string;
+  trackAInstruction: string;
+  countdownReady: string;
+  countdownGo: string;
   placeholder: string;
 };
 
@@ -61,6 +69,7 @@ const copy: Record<Locale, Copy> = {
     signupSuccess: "Signed up successfully! You're all set.",
     stagePrepare: "Stage {n}: Prepare",
     stageStep: "Stage {n}: Step {m}",
+    stage1Step1Title: "Stage 1: Step 1- Smooth Pursuit (vertical)",
     continue: "Continue",
     next: "Next",
     congratsTitle: "Way to go!",
@@ -97,6 +106,14 @@ const copy: Record<Locale, Copy> = {
       "Camera access was denied. Please enable camera permissions in your browser settings.",
     cameraUnavailable: "Camera is not available on this device.",
     cameraLoading: "Loading camera…",
+    calibrationRequired:
+      "Complete the eye calibration above before continuing to Step 1.",
+    calibrationComplete: "Calibrated",
+    viewTrackingAnalytics: "View Tracking Analytics",
+    closeAnalytics: "Close",
+    trackAInstruction: "Track the 'A' with your eyes.",
+    countdownReady: "Ready?",
+    countdownGo: "GO!",
     placeholder: "Insert text here",
   },
   "zh-Hant": {
@@ -113,6 +130,7 @@ const copy: Record<Locale, Copy> = {
     signupSuccess: "註冊成功～ 一切準備就緒",
     stagePrepare: "第一級：準備",
     stageStep: "第一級：第{m}部分",
+    stage1Step1Title: "第一級：第1部分 - 垂直平滑追視",
     continue: "繼續",
     next: "下一步",
     congratsTitle: "做得好！",
@@ -143,6 +161,13 @@ const copy: Record<Locale, Copy> = {
     cameraDenied: "相機權限被拒絕。請在瀏覽器設定中啟用相機權限。",
     cameraUnavailable: "此裝置無法使用相機。",
     cameraLoading: "正在載入相機…",
+    calibrationRequired: "請先完成上方的眼部校準，然後才能進入第一步。",
+    calibrationComplete: "已校準",
+    viewTrackingAnalytics: "查看追蹤分析",
+    closeAnalytics: "關閉",
+    trackAInstruction: "用眼睛追蹤「A」。",
+    countdownReady: "準備好了嗎？",
+    countdownGo: "開始！",
     placeholder: "請輸入文字",
   },
   "zh-Hans": {
@@ -159,6 +184,7 @@ const copy: Record<Locale, Copy> = {
     signupSuccess: "注册成功～ 一切准备就绪",
     stagePrepare: "第一级：准备",
     stageStep: "第一级：第{m}部分",
+    stage1Step1Title: "第一级：第1部分 - 垂直平滑追视",
     continue: "继续",
     next: "下一步",
     congratsTitle: "做得好！",
@@ -189,6 +215,13 @@ const copy: Record<Locale, Copy> = {
     cameraDenied: "相机权限被拒绝。请在浏览器设置中启用相机权限。",
     cameraUnavailable: "此设备无法使用相机。",
     cameraLoading: "正在加载相机…",
+    calibrationRequired: "请先完成上方的眼部校准，然后才能进入第一步。",
+    calibrationComplete: "已校准",
+    viewTrackingAnalytics: "查看追踪分析",
+    closeAnalytics: "关闭",
+    trackAInstruction: "用眼睛追踪「A」。",
+    countdownReady: "准备好了吗？",
+    countdownGo: "开始！",
     placeholder: "请输入文字",
   },
 };
@@ -207,6 +240,10 @@ export function formatStageStep(
   stage: number,
   step: number,
 ): string {
+  if (stage === 1 && step === 1) {
+    return copy[locale].stage1Step1Title;
+  }
+
   const template = copy[locale].stageStep;
   return template.replace("{n}", String(stage)).replace("{m}", String(step));
 }
