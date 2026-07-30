@@ -30,5 +30,14 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "Tracking/src/App.tsx", "Tracking/src/main.tsx", "Tracking/src/pages"]
+  "exclude": [
+    "node_modules",
+    "Tracking/node_modules",
+    "Tracking/dist",
+    "Tracking/vite.config.ts",
+    "Tracking/eslint.config.js",
+    "Tracking/src/App.tsx",
+    "Tracking/src/main.tsx",
+    "Tracking/src/pages"
+  ]
 }
