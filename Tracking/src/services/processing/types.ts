@@ -36,10 +36,16 @@ export type MovementComparisonRecord = {
   timestamp: number;
   elapsedMs: number;
   target: Point2D;
+  /** Raw iris offset in normalized stimulus space. */
   leftEye: Point2D;
   rightEye: Point2D;
-  /** Binocular average kept for export compatibility. */
+  /** Head-pose compensated gaze in degrees (x = horizontal, y = vertical). */
+  correctedLeftEye: Point2D | null;
+  correctedRightEye: Point2D | null;
+  /** Binocular average kept for export compatibility (raw). */
   actual: Point2D;
+  /** Binocular average of corrected gaze in degrees. */
+  correctedActual: Point2D | null;
   error: Point2D & { magnitude: number };
   velocity: MovementVelocity;
   rotation: MovementRotation;

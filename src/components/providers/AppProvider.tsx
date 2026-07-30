@@ -23,6 +23,7 @@ type AppContextValue = {
   setLocale: (locale: Locale) => void;
   toggleTheme: () => void;
   toggleSound: () => void;
+  toggleBoneLandmarks: () => void;
   setAuth: (auth: AuthState, token?: string) => void;
   logout: () => void;
   updateTraining: (partial: Partial<AppState>) => void;
@@ -54,8 +55,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         : state.locale === "zh-Hans"
           ? "zh-Hans"
           : "en";
-    persistPreferences(state.locale, state.theme, state.sound);
-  }, [state.locale, state.theme, state.sound]);
+    persistPreferences(
+      state.locale,
+      state.theme,
+      state.sound,
+      state.showBoneLandmarks,
+    );
+  }, [state.locale, state.theme, state.sound, state.showBoneLandmarks]);
 
   const setLocale = useCallback((locale: Locale) => {
     setState((prev) => ({ ...prev, locale }));
@@ -75,6 +81,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const toggleBoneLandmarks = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      showBoneLandmarks: !prev.showBoneLandmarks,
+    }));
+  }, []);
+
   const setAuth = useCallback((auth: AuthState, token?: string) => {
     setState((prev) => ({ ...prev, auth }));
     persistAuth(auth, token);
@@ -85,9 +98,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       auth: { status: "anonymous" },
       stepResults: {},
+      stepAnalysis: {},
       stage: 1,
       step: 1,
       phase: "prepare",
+      stageStartedAt: {},
     }));
     persistAuth({ status: "anonymous" });
   }, []);
@@ -102,7 +117,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       stage: 1,
       step: 1,
       phase: "prepare",
+      stageStartedAt: {},
       stepResults: {},
+      stepAnalysis: {},
     }));
   }, []);
 
@@ -112,6 +129,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLocale,
       toggleTheme,
       toggleSound,
+      toggleBoneLandmarks,
       setAuth,
       logout,
       updateTraining,
@@ -125,6 +143,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLocale,
       toggleTheme,
       toggleSound,
+      toggleBoneLandmarks,
       setAuth,
       logout,
       updateTraining,

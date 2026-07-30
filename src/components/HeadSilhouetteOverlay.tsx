@@ -30,7 +30,7 @@ export function HeadSilhouetteOverlay({
       <img
         src="/icons/Head.svg"
         alt=""
-        className="absolute bottom-0 left-1/2 max-h-[78%] w-auto max-w-[62%] -translate-x-1/2 object-contain object-bottom"
+        className="absolute top-[20%] bottom-0 left-1/2 h-[80%] w-auto max-w-none -translate-x-1/2 object-contain object-bottom"
         aria-hidden="true"
       />
 

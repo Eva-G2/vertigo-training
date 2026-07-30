@@ -54,6 +54,10 @@ export type FovCalibrationModel = {
   isCalibrated: boolean;
   leftBaseline: PupilPixelBaseline;
   rightBaseline: PupilPixelBaseline;
+  /** Forehead landmark Y (0–1) captured during the center fixation sample. */
+  faceTopNormalizedY: number | null;
+  /** Chin landmark Y (0–1) captured during the center fixation sample. */
+  chinNormalizedY: number | null;
   /** Horizontal gain for the left eye (degrees per pixel). */
   kL: number;
   /** Horizontal gain for the right eye (degrees per pixel). */

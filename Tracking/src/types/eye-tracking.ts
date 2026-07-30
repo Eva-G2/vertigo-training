@@ -69,6 +69,26 @@ export type CalibratedEyeOffset = {
   horizontalNorm: number;
 };
 
+/** Gaze direction in degrees relative to the calibrated fixation baseline. */
+export type GazeDegrees = {
+  horizontal: number;
+  vertical: number;
+};
+
+/** Delta head rotation applied when compensating gaze for a frame. */
+export type HeadRotationDelta = {
+  yaw: number;
+  pitch: number;
+  roll: number;
+};
+
+/** Landmark-derived angles for head-movement charts (nod / turn). */
+export type HeadMovementAngles = {
+  pitchDeg: number;
+  yawDeg: number;
+  rollDeg: number;
+};
+
 export type EyeTrackingSample = {
   id: string;
   timestamp: number;
@@ -76,13 +96,42 @@ export type EyeTrackingSample = {
   rightEye: EyeMetrics;
   leftCalibratedOffset: CalibratedEyeOffset | null;
   rightCalibratedOffset: CalibratedEyeOffset | null;
+  /** Raw calibrated gaze before head-pose compensation. */
+  rawLeftGazeDeg: GazeDegrees | null;
+  rawRightGazeDeg: GazeDegrees | null;
+  /** Head-pose compensated ocular rotation (eye-in-orbit). */
+  leftEyeCorrected: GazeDegrees | null | undefined;
+  rightEyeCorrected: GazeDegrees | null | undefined;
+  /** Head rotation delta subtracted from raw gaze this frame. */
+  headRotationDelta: HeadRotationDelta | null;
   gazeStability: number;
   headPose: HeadPose;
   headPose3D: HeadPose3D | null;
+  /** Raw landmark-derived nod / turn angles (no smoothing). */
+  headMovementAngles: HeadMovementAngles | null;
+  /** Session-baseline-relative pitch for charts (degrees). */
+  headChartPitchDeg: number;
+  /** Session-baseline-relative yaw for charts (degrees). */
+  headChartYawDeg: number;
+  /**
+   * Kalman-smoothed head velocity magnitude (°/s) from Nasal Root (168).
+   * Used by the VOR head-vs-eye velocity graph. NaN when tracking is lost.
+   */
+  nasalRootHeadVelocityDegPerSec: number;
+  /**
+   * Kalman-smoothed eye velocity magnitude (°/s) from the mean of both
+   * pupil centers (468 + 473). Used by the VOR head-vs-eye velocity graph.
+   * NaN when tracking is lost.
+   */
+  pupilCenterEyeVelocityDegPerSec: number;
   leftIris: HeadRelativeIris | null;
   rightIris: HeadRelativeIris | null;
   fovGaze: FovGazePoint | null;
   faceDetected: boolean;
+  /** Head-pose-isolated binocular gaze (degrees). Null when tracking is lost. */
+  eyeInHeadDeg: GazeDegrees | null;
+  /** Real-time VOR gain (|eye velocity| / |head velocity|). Null when paused. */
+  vorGain: number | null;
 };
 
 export type TrackingSession = {

@@ -35,6 +35,13 @@ export function computeSharedDeviationBounds(
       normalizedToDegrees(record.rightEye.x, stimulus.amplitude),
       normalizedToDegrees(record.rightEye.y, stimulus.amplitude),
     );
+
+    if (record.correctedLeftEye) {
+      values.push(record.correctedLeftEye.x, record.correctedLeftEye.y);
+    }
+    if (record.correctedRightEye) {
+      values.push(record.correctedRightEye.x, record.correctedRightEye.y);
+    }
   }
 
   const stimulusPeak = normalizedToDegrees(

@@ -14,6 +14,11 @@ import {
   TARGET_ANGLE_DEG,
 } from "@/services/tracking/fovCalibration";
 import type { FovCalibrationTarget } from "@/services/tracking/types";
+import {
+  type CalibrationCopy,
+  DEFAULT_CALIBRATION_COPY,
+  fillCopy,
+} from "./calibrationCopy";
 
 export type CalibrationGainFactors = {
   kL: number;
@@ -21,6 +26,42 @@ export type CalibrationGainFactors = {
   kLY: number;
   kRY: number;
 };
+
+/**
+ * Snapshot of the calibration UI surfaced to host components so that the
+ * instruction copy, distance readout, and capture action can be rendered
+ * outside the overlay (e.g. above and around the video box).
+ */
+export type CalibrationUiState = {
+  phase: CalibrationPhase;
+  instruction: string;
+  estimatedDistanceCm: number | null;
+  targetDistanceCm: number;
+  canCapture: boolean;
+  captureLabel: string | null;
+};
+
+export function calibrationUiStatesEqual(
+  previous: CalibrationUiState | null,
+  next: CalibrationUiState | null,
+): boolean {
+  if (previous === next) {
+    return true;
+  }
+
+  if (!previous || !next) {
+    return false;
+  }
+
+  return (
+    previous.phase === next.phase &&
+    previous.instruction === next.instruction &&
+    previous.estimatedDistanceCm === next.estimatedDistanceCm &&
+    previous.targetDistanceCm === next.targetDistanceCm &&
+    previous.canCapture === next.canCapture &&
+    previous.captureLabel === next.captureLabel
+  );
+}
 
 type CalibrationOverlayProps = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -37,14 +78,48 @@ type CalibrationOverlayProps = {
   viewportTargets?: boolean;
   onStatusChange?: (status: CalibrationStatus) => void;
   onCalibrated?: (factors: CalibrationGainFactors) => void;
+  /** Surfaces the live instruction/distance/capture state to the host. */
+  onUiStateChange?: (state: CalibrationUiState | null) => void;
+  /** Receives the latest capture handler so the host can drive the action. */
+  captureActionRef?: React.MutableRefObject<(() => void) | null>;
+  /** Localized copy; defaults to English so the standalone build stays self-contained. */
+  copy?: CalibrationCopy;
 };
 
-const FEEDBACK_COPY: Record<DistanceFeedback, string> = {
-  unknown: "Face the camera to begin",
-  too_close: "Move further",
-  too_far: "Move closer",
-  confirmed: "Position confirmed",
-};
+function feedbackText(copy: CalibrationCopy, feedback: DistanceFeedback): string {
+  switch (feedback) {
+    case "too_close":
+      return copy.moveFurther;
+    case "too_far":
+      return copy.moveCloser;
+    case "confirmed":
+      return copy.positionConfirmed;
+    default:
+      return copy.faceCamera;
+  }
+}
+
+function targetName(copy: CalibrationCopy, label: string): string {
+  return copy.targetNames[label] ?? label;
+}
+
+function buildInstruction(
+  copy: CalibrationCopy,
+  phase: CalibrationPhase,
+  feedback: DistanceFeedback,
+  distanceConfirmed: boolean,
+  currentTarget: FovCalibrationTarget | null,
+): string {
+  if (phase === "collecting" && distanceConfirmed && currentTarget) {
+    return fillCopy(copy.lookAtTargetReady, {
+      target: targetName(copy, currentTarget.label),
+    });
+  }
+  if (phase === "complete") {
+    return copy.calibratingFov;
+  }
+  return feedbackText(copy, feedback);
+}
 
 function targetPositionPercent(x: number, y: number): { left: string; top: string } {
   const edgeInset = 42;
@@ -166,6 +241,9 @@ export function CalibrationOverlay({
   viewportTargets = false,
   onStatusChange,
   onCalibrated,
+  onUiStateChange,
+  captureActionRef,
+  copy = DEFAULT_CALIBRATION_COPY,
 }: CalibrationOverlayProps) {
   const managerRef = useRef(new CalibrationManager());
   const smootherRef = useRef(new DistanceSmoother());
@@ -280,6 +358,57 @@ export function CalibrationOverlay({
     setActiveTargetIndex((index) => Math.min(index + 1, targets.length - 1));
   };
 
+  const instruction = buildInstruction(
+    copy,
+    phase,
+    feedback,
+    distanceOk,
+    currentTarget,
+  );
+  const estimatedDistanceCm =
+    phase === "distance_check" || phase === "collecting" ? distanceCm : null;
+  const targetDistanceCm = distanceRange.optimalCm;
+  const captureLabel = currentTarget?.label ?? null;
+
+  useEffect(() => {
+    if (captureActionRef) {
+      captureActionRef.current = handleCapture;
+    }
+  });
+
+  const lastUiStateRef = useRef<CalibrationUiState | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!onUiStateChange) return;
+
+    const nextState = active
+      ? {
+          phase,
+          instruction,
+          estimatedDistanceCm,
+          targetDistanceCm,
+          canCapture,
+          captureLabel,
+        }
+      : null;
+
+    if (calibrationUiStatesEqual(lastUiStateRef.current ?? null, nextState)) {
+      return;
+    }
+
+    lastUiStateRef.current = nextState;
+    onUiStateChange(nextState);
+  }, [
+    onUiStateChange,
+    active,
+    phase,
+    instruction,
+    estimatedDistanceCm,
+    targetDistanceCm,
+    canCapture,
+    captureLabel,
+  ]);
+
   const allCaptured = useMemo(
     () => targets.every((target) => capturedLabels.has(target.label)),
     [capturedLabels, targets],
@@ -380,9 +509,7 @@ export function CalibrationOverlay({
         {(phase === "distance_check" || phase === "collecting") && (
           <>
             <p className="text-center text-sm font-semibold">
-              {phase === "distance_check"
-                ? "Pre-Calibration Distance Check"
-                : "FOV Calibration — fixate the highlighted target"}
+              {phase === "distance_check" ? copy.distanceCheckTitle : copy.fovTitle}
             </p>
             <p
               className={`text-center text-lg font-bold ${
@@ -390,14 +517,16 @@ export function CalibrationOverlay({
               }`}
             >
               {distanceTargetConfirmed && phase === "collecting" && currentTarget
-                ? `Look at the ${currentTarget.label} target`
-                : FEEDBACK_COPY[feedback]}
+                ? fillCopy(copy.lookAtTarget, {
+                    target: targetName(copy, currentTarget.label),
+                  })
+                : feedbackText(copy, feedback)}
             </p>
             {distanceCm !== null && (
               <p className="text-center text-xs text-white/70">
-                Estimated distance: {distanceCm.toFixed(1)} cm · Target:{" "}
-                {distanceRange.optimalCm.toFixed(0)} cm ({TARGET_ANGLE_DEG}°
-                visual angle)
+                {copy.estimatedDistance}: {distanceCm.toFixed(1)} cm ·{" "}
+                {copy.targetShort}: {distanceRange.optimalCm.toFixed(0)} cm (
+                {fillCopy(copy.visualAngle, { deg: TARGET_ANGLE_DEG })})
               </p>
             )}
           </>
@@ -407,11 +536,14 @@ export function CalibrationOverlay({
           <>
             {!distanceOk && (
               <p className="text-center text-xs text-white/80">
-                Adjust your distance before capturing the next point.
+                {copy.adjustDistance}
               </p>
             )}
             <p className="text-center text-xs text-white/70">
-              Capture each point at ±{TARGET_ANGLE_DEG}° ({currentTarget.label})
+              {fillCopy(copy.captureEachPoint, {
+                deg: TARGET_ANGLE_DEG,
+                target: targetName(copy, currentTarget.label),
+              })}
             </p>
             <button
               type="button"
@@ -419,7 +551,7 @@ export function CalibrationOverlay({
               disabled={!canCapture}
               className="mx-auto block rounded-xl bg-cyan px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Capture {currentTarget.label}
+              {copy.capture} {targetName(copy, currentTarget.label)}
             </button>
           </>
         )}
@@ -427,7 +559,7 @@ export function CalibrationOverlay({
         {phase === "complete" && !embedded && (
           <>
             <p className="text-center text-sm font-semibold text-green-400">
-              All calibration points captured
+              {copy.allPointsCaptured}
             </p>
             <button
               type="button"
@@ -440,14 +572,14 @@ export function CalibrationOverlay({
               disabled={isCalibrated}
               className="mx-auto block rounded-xl bg-cyan px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Calibrate FOV
+              {copy.calibrateFov}
             </button>
           </>
         )}
 
         {phase === "complete" && embedded && (
           <p className="text-center text-sm font-semibold text-green-400">
-            Calibrating field of view…
+            {copy.calibratingFov}
           </p>
         )}
 
@@ -457,7 +589,7 @@ export function CalibrationOverlay({
             onClick={onClose}
             className="mx-auto block text-xs text-white/60 underline-offset-2 hover:text-white hover:underline"
           >
-            Cancel calibration
+            {copy.cancelCalibration}
           </button>
         )}
       </div>
@@ -465,10 +597,7 @@ export function CalibrationOverlay({
 
   if (useViewportLayout) {
     return (
-      <>
-        <div className="pointer-events-none fixed inset-0 z-20">{targetLayer}</div>
-        {controlPanel}
-      </>
+      <div className="pointer-events-none fixed inset-0 z-20">{targetLayer}</div>
     );
   }
 

@@ -3,16 +3,23 @@ import {
   useCallback,
   useMemo,
   useReducer,
+  useRef,
   type ReactNode,
 } from "react";
 import type { EyeTrackingSample } from "@/types/eye-tracking";
 import type { FaceLandmarkPoint } from "@/types/face-mesh-frame";
-import type { VerticalPursuitDataset } from "@/services/analytics";
+import type {
+  PursuitAxis,
+  VerticalPursuitDataset,
+  VerticalPursuitRecord,
+} from "@/services/analytics";
 import type {
   ChartJsMovementExport,
   MovementComparisonRecord,
 } from "@/services/processing";
-import type { FovCalibrationTarget, TrackingService } from "@/services/tracking";
+import type { FovCalibrationTarget, GazeRecenterBaseline, TrackingService } from "@/services/tracking";
+import { TrackingStateManager } from "@/services/tracking/TrackingStateManager";
+import { LANDMARKS, extractEyeMetrics } from "@/vision/mediapipe/landmarks";
 import type { VisionPipelineStatus } from "@/vision/pipeline/types";
 import {
   eyeTrackingReducer,
@@ -41,6 +48,8 @@ type EyeTrackingContextValue = {
     kRY: number;
     leftBaseline: { x: number; y: number };
     rightBaseline: { x: number; y: number };
+    faceTopNormalizedY: number | null;
+    chinNormalizedY: number | null;
   } | null;
   resetCalibration: () => void;
   applyPrepCalibration: (params: {
@@ -50,16 +59,24 @@ type EyeTrackingContextValue = {
     kRY: number;
     leftBaseline?: { x: number; y: number };
     rightBaseline?: { x: number; y: number };
+    faceTopNormalizedY?: number | null;
+    chinNormalizedY?: number | null;
   }) => void;
+  recenterBaseline: () => GazeRecenterBaseline | null;
+  recenterTracking: () => GazeRecenterBaseline | null;
+  applyRecenterBaseline: (baseline: GazeRecenterBaseline) => void;
+  clearRecenterBaseline: () => void;
   exportMovementData: () => ChartJsMovementExport | null;
   downloadMovementJson: () => void;
   getMovementRecords: () => MovementComparisonRecord[];
   startTrackingAnalytics: (
-    getTargetY: () => number | null,
+    getTarget: () => number | null,
+    axis?: PursuitAxis,
     label?: string,
   ) => void;
   stopTrackingAnalytics: () => VerticalPursuitDataset | null;
   getVerticalPursuitDataset: () => VerticalPursuitDataset | null;
+  getVerticalPursuitRecords: () => VerticalPursuitRecord[];
   registerTrackingService: (service: TrackingService | null) => void;
 };
 
@@ -73,11 +90,53 @@ type EyeTrackingProviderProps = {
 
 let activeTrackingService: TrackingService | null = null;
 
+const LANDMARK_EPSILON = 0.00015;
+
+function faceLandmarksStable(
+  previous: FaceLandmarkPoint[] | null,
+  next: FaceLandmarkPoint[] | null,
+): boolean {
+  if (previous === next) {
+    return true;
+  }
+
+  if (!previous || !next || previous.length !== next.length) {
+    return false;
+  }
+
+  const indices = [
+    LANDMARKS.leftIrisCenter,
+    LANDMARKS.rightIrisCenter,
+    LANDMARKS.forehead,
+    LANDMARKS.chin,
+  ];
+
+  for (const index of indices) {
+    const a = previous[index];
+    const b = next[index];
+    if (!a || !b) {
+      return false;
+    }
+
+    if (
+      Math.abs(a.x - b.x) > LANDMARK_EPSILON ||
+      Math.abs(a.y - b.y) > LANDMARK_EPSILON
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
   const [state, dispatch] = useReducer(
     eyeTrackingReducer,
     initialEyeTrackingState,
   );
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const latestLandmarksRef = useRef<FaceLandmarkPoint[] | null>(null);
 
   const syncCalibrationState = useCallback(() => {
     const model = activeTrackingService?.getFovCalibrator().getModel();
@@ -113,22 +172,22 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
   }, []);
 
   const endSession = useCallback(() => {
-    activeTrackingService?.getMovementProcessor().stop();
+    activeTrackingService?.endRecordingSession();
     dispatch({ type: "SESSION_END" });
   }, []);
 
   const startRecording = useCallback(() => {
-    activeTrackingService?.getMovementProcessor().start();
+    activeTrackingService?.startRecording();
     dispatch({ type: "RECORDING_START" });
   }, []);
 
   const pauseRecording = useCallback(() => {
-    activeTrackingService?.getMovementProcessor().stop();
+    activeTrackingService?.pauseRecording();
     dispatch({ type: "RECORDING_PAUSE" });
   }, []);
 
   const resumeRecording = useCallback(() => {
-    activeTrackingService?.getMovementProcessor().start();
+    activeTrackingService?.resumeRecording();
     dispatch({ type: "RECORDING_RESUME" });
   }, []);
 
@@ -144,6 +203,11 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
 
   const updateFaceLandmarks = useCallback(
     (landmarks: FaceLandmarkPoint[] | null) => {
+      if (faceLandmarksStable(latestLandmarksRef.current, landmarks)) {
+        return;
+      }
+
+      latestLandmarksRef.current = landmarks;
       dispatch({ type: "FACE_LANDMARKS_UPDATE", payload: landmarks });
     },
     [],
@@ -151,13 +215,25 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
 
   const recordMovementSample = useCallback(
     (sample: EyeTrackingSample) => {
-      if (!activeTrackingService) {
+      if (!activeTrackingService || !TrackingStateManager.isActive) {
         return;
       }
 
       const verticalAnalytics =
         activeTrackingService.getVerticalPursuitAnalytics();
       if (verticalAnalytics.isActive()) {
+        const model = activeTrackingService.getFovCalibrator().getModel();
+        if (model.isCalibrated) {
+          verticalAnalytics.setCalibration({
+            kL: model.kL,
+            kR: model.kR,
+            kLY: model.kLY,
+            kRY: model.kRY,
+            leftBaseline: model.leftBaseline,
+            rightBaseline: model.rightBaseline,
+          });
+        }
+
         const record = verticalAnalytics.record(sample);
         if (record) {
           dispatch({
@@ -187,16 +263,35 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
 
   const startTrackingAnalytics = useCallback<
     EyeTrackingContextValue["startTrackingAnalytics"]
-  >((getTargetY, label = "Stage 1 Step 1 training") => {
+  >((getTarget, axis = "vertical", label = "Stage 1 Step 1 training") => {
     if (!activeTrackingService) {
       return;
     }
 
+    activeTrackingService.startTracking();
     activeTrackingService.getMovementProcessor().reset();
-    activeTrackingService.getVerticalPursuitAnalytics().start(getTargetY);
-    dispatch({ type: "VERTICAL_PURSUIT_RESET" });
+    activeTrackingService.resetHeadChartBaseline();
+    activeTrackingService.scheduleBaselineCapture();
+    const model = activeTrackingService.getFovCalibrator().getModel();
+    const verticalAnalytics = activeTrackingService.getVerticalPursuitAnalytics();
+    verticalAnalytics.setCalibration(
+      model.isCalibrated
+        ? {
+            kL: model.kL,
+            kR: model.kR,
+            kLY: model.kLY,
+            kRY: model.kRY,
+            leftBaseline: model.leftBaseline,
+            rightBaseline: model.rightBaseline,
+          }
+        : null,
+    );
+    verticalAnalytics.start(getTarget, axis);
+    const vorAxis = axis === "horizontal" ? "horizontal" : "vertical";
+    activeTrackingService.getGazeStabilityService().start(vorAxis);
+    dispatch({ type: "VERTICAL_PURSUIT_RESET", payload: axis });
 
-    if (!state.session) {
+    if (!stateRef.current.session) {
       dispatch({
         type: "SESSION_START",
         payload: {
@@ -206,10 +301,12 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
           label,
         },
       });
+    } else {
+      dispatch({ type: "SESSION_LABEL_UPDATE", payload: label });
     }
 
     dispatch({ type: "RECORDING_START" });
-  }, [state.session]);
+  }, []);
 
   const stopTrackingAnalytics = useCallback(() => {
     if (!activeTrackingService) {
@@ -217,6 +314,8 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
     }
 
     const dataset = activeTrackingService.getVerticalPursuitAnalytics().stop();
+    activeTrackingService.getGazeStabilityService().stop();
+    activeTrackingService.pauseRecording();
     dispatch({ type: "VERTICAL_PURSUIT_FINALIZE", payload: dataset });
     dispatch({ type: "RECORDING_PAUSE" });
     return dataset;
@@ -226,24 +325,50 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
     return state.verticalPursuitDataset;
   }, [state.verticalPursuitDataset]);
 
+  const getVerticalPursuitRecords = useCallback(() => {
+    const liveRecords =
+      activeTrackingService?.getVerticalPursuitAnalytics().getRecords() ?? [];
+    if (liveRecords.length > 0) {
+      return liveRecords;
+    }
+    return state.verticalPursuitDataset?.records ?? [];
+  }, [state.verticalPursuitDataset]);
+
   const setPipelineStatus = useCallback((status: VisionPipelineStatus) => {
     dispatch({ type: "PIPELINE_STATUS", payload: status });
   }, []);
 
   const captureCalibration = useCallback(
     (target: FovCalibrationTarget) => {
-      const sample = state.latestSample;
-      if (!sample?.faceDetected || !activeTrackingService) {
+      const { latestFaceLandmarks } = stateRef.current;
+      if (!activeTrackingService || !latestFaceLandmarks?.length) {
         return;
       }
 
-      activeTrackingService.recordCalibrationSample(target, {
-        left: sample.leftEye.center,
-        right: sample.rightEye.center,
-      });
+      const eyeMetrics = extractEyeMetrics(latestFaceLandmarks);
+      if (!eyeMetrics) {
+        return;
+      }
+
+      const forehead = latestFaceLandmarks[LANDMARKS.forehead];
+      const chin = latestFaceLandmarks[LANDMARKS.chin];
+      const faceTopNormalizedY =
+        target.label === "center" && forehead ? forehead.y : undefined;
+      const chinNormalizedY =
+        target.label === "center" && chin ? chin.y : undefined;
+
+      activeTrackingService.recordCalibrationSample(
+        target,
+        {
+          left: eyeMetrics.leftEye.center,
+          right: eyeMetrics.rightEye.center,
+        },
+        faceTopNormalizedY,
+        chinNormalizedY,
+      );
       syncCalibrationState();
     },
-    [state.latestSample, syncCalibrationState],
+    [syncCalibrationState],
   );
 
   const runCalibration = useCallback(() => {
@@ -265,6 +390,8 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
       kRY: model.kRY,
       leftBaseline: model.leftBaseline,
       rightBaseline: model.rightBaseline,
+      faceTopNormalizedY: model.faceTopNormalizedY,
+      chinNormalizedY: model.chinNormalizedY,
     };
   }, []);
 
@@ -281,6 +408,35 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
       type: "CALIBRATION_UPDATE",
       payload: { isCalibrated: true, sampleCount: 0 },
     });
+  }, []);
+
+  const recenterBaseline = useCallback((): GazeRecenterBaseline | null => {
+    const sample = stateRef.current.latestSample;
+    if (!sample?.faceDetected || !activeTrackingService) {
+      return null;
+    }
+
+    return activeTrackingService.recenterBaseline(sample);
+  }, []);
+
+  const recenterTracking = useCallback((): GazeRecenterBaseline | null => {
+    const sample = stateRef.current.latestSample;
+    if (!sample?.faceDetected || !activeTrackingService) {
+      return null;
+    }
+
+    return activeTrackingService.recenterTracking(sample);
+  }, []);
+
+  const applyRecenterBaseline = useCallback(
+    (baseline: GazeRecenterBaseline) => {
+      activeTrackingService?.setRecenterBaseline(baseline);
+    },
+    [],
+  );
+
+  const clearRecenterBaseline = useCallback(() => {
+    activeTrackingService?.clearRecenterBaseline();
   }, []);
 
   const exportMovementData = useCallback((): ChartJsMovementExport | null => {
@@ -330,12 +486,17 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
       getCalibrationFactors,
       resetCalibration,
       applyPrepCalibration,
+      recenterBaseline,
+      recenterTracking,
+      applyRecenterBaseline,
+      clearRecenterBaseline,
       exportMovementData,
       downloadMovementJson,
       getMovementRecords,
       startTrackingAnalytics,
       stopTrackingAnalytics,
       getVerticalPursuitDataset,
+      getVerticalPursuitRecords,
       registerTrackingService,
     }),
     [
@@ -355,12 +516,17 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
       getCalibrationFactors,
       resetCalibration,
       applyPrepCalibration,
+      recenterBaseline,
+      recenterTracking,
+      applyRecenterBaseline,
+      clearRecenterBaseline,
       exportMovementData,
       downloadMovementJson,
       getMovementRecords,
       startTrackingAnalytics,
       stopTrackingAnalytics,
       getVerticalPursuitDataset,
+      getVerticalPursuitRecords,
       registerTrackingService,
     ],
   );

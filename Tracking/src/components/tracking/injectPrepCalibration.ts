@@ -7,6 +7,8 @@ export type PrepCalibrationPayload = {
   kRY: number;
   leftBaseline?: { x: number; y: number } | null;
   rightBaseline?: { x: number; y: number } | null;
+  faceTopNormalizedY?: number | null;
+  chinNormalizedY?: number | null;
 };
 
 /**
@@ -24,5 +26,7 @@ export function injectPrepCalibration(
     kRY: calibration.kRY,
     leftBaseline: calibration.leftBaseline ?? undefined,
     rightBaseline: calibration.rightBaseline ?? undefined,
+    faceTopNormalizedY: calibration.faceTopNormalizedY ?? undefined,
+    chinNormalizedY: calibration.chinNormalizedY ?? undefined,
   });
 }

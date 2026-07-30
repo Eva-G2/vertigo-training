@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { CalibrationData } from "@/lib/types";
+import type { CalibrationData, GazeRecenterBaseline } from "@/lib/types";
 
 const initialCalibration: CalibrationData = {
   status: "PENDING",
@@ -18,6 +18,8 @@ const initialCalibration: CalibrationData = {
   kRY: null,
   leftBaseline: null,
   rightBaseline: null,
+  faceTopNormalizedY: null,
+  chinNormalizedY: null,
 };
 
 type TestContextValue = {
@@ -25,6 +27,9 @@ type TestContextValue = {
   setCalibration: (data: CalibrationData) => void;
   resetCalibration: () => void;
   isCalibrated: boolean;
+  recenterBaseline: GazeRecenterBaseline | null;
+  applyRecenterBaseline: (baseline: GazeRecenterBaseline) => void;
+  clearRecenterBaseline: () => void;
 };
 
 const TestContext = createContext<TestContextValue | null>(null);
@@ -32,6 +37,8 @@ const TestContext = createContext<TestContextValue | null>(null);
 export function TestProvider({ children }: { children: ReactNode }) {
   const [calibration, setCalibrationState] =
     useState<CalibrationData>(initialCalibration);
+  const [recenterBaseline, setRecenterBaseline] =
+    useState<GazeRecenterBaseline | null>(null);
 
   const setCalibration = useCallback((data: CalibrationData) => {
     setCalibrationState(data);
@@ -39,6 +46,15 @@ export function TestProvider({ children }: { children: ReactNode }) {
 
   const resetCalibration = useCallback(() => {
     setCalibrationState(initialCalibration);
+    setRecenterBaseline(null);
+  }, []);
+
+  const applyRecenterBaseline = useCallback((baseline: GazeRecenterBaseline) => {
+    setRecenterBaseline(baseline);
+  }, []);
+
+  const clearRecenterBaseline = useCallback(() => {
+    setRecenterBaseline(null);
   }, []);
 
   const value = useMemo(
@@ -47,8 +63,18 @@ export function TestProvider({ children }: { children: ReactNode }) {
       setCalibration,
       resetCalibration,
       isCalibrated: calibration.status === "CALIBRATED",
+      recenterBaseline,
+      applyRecenterBaseline,
+      clearRecenterBaseline,
     }),
-    [calibration, resetCalibration, setCalibration],
+    [
+      applyRecenterBaseline,
+      calibration,
+      clearRecenterBaseline,
+      recenterBaseline,
+      resetCalibration,
+      setCalibration,
+    ],
   );
 
   return (

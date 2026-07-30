@@ -16,9 +16,11 @@
 
 :root,
 [data-theme="light"] {
-  --color-blue: #2949cc;
+  --app-blue: #2949cc;
+  --app-dark-blue: #111d4d;
+  --color-blue: var(--app-blue);
   --color-cyan: #10a69c;
-  --color-dark-blue: #111d4d;
+  --color-dark-blue: var(--app-dark-blue);
   --color-yellow: #fff600;
   --radius-card: 20px;
   --border-width: 3px;
@@ -28,6 +30,8 @@
   --border-color: #2949cc;
   --chrome-lang-bg: #2949cc;
   --chrome-lang-fg: #ffffff;
+  --chrome-landmarks-bg: #6366f1;
+  --chrome-landmarks-fg: #ffffff;
   --chrome-sound-bg: #10a69c;
   --chrome-sound-fg: #ffffff;
   --chrome-theme-bg: #111d4d;
@@ -42,18 +46,24 @@
 }
 
 [data-theme="dark"] {
+  --app-blue: #fff600;
+  --app-dark-blue: #ffffff;
+  --color-blue: var(--app-blue);
+  --color-dark-blue: var(--app-dark-blue);
   --background: #0d1b3e;
   --foreground: #fff600;
   --card: #0d1b3e;
   --border-color: #fff600;
   --chrome-lang-bg: #fff600;
   --chrome-lang-fg: #0d1b3e;
+  --chrome-landmarks-bg: #818cf8;
+  --chrome-landmarks-fg: #ffffff;
   --chrome-sound-bg: #10a69c;
   --chrome-sound-fg: #ffffff;
   --chrome-theme-bg: #ffffff;
-  --chrome-theme-fg: #2949cc;
+  --chrome-theme-fg: #fff600;
   --btn-hover-bg: #fff600;
-  --btn-hover-fg: #0d1b3e;
+  --btn-hover-fg: #111d4d;
   --input-filled-bg: #10a69c;
   --input-filled-fg: #0d1b3e;
   --modal-selected-bg: #10a69c;
@@ -65,9 +75,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-blue: #2949cc;
+  --color-blue: var(--app-blue);
   --color-cyan: #10a69c;
-  --color-dark-blue: #111d4d;
+  --color-dark-blue: var(--app-dark-blue);
   --color-yellow: #fff600;
   --color-border: var(--border-color);
   --font-sans: var(--font-noto-sans);
@@ -77,4 +87,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-noto-sans), "Noto Sans", sans-serif;
+}
+
+/** Stage 2 demo media: zoom video inside its box; invert in dark mode. */
+.stage2-demo-video-zoom {
+  transform: scale(1.2);
+}
+
+[data-theme="dark"] .stage2-demo-media {
+  filter: invert(1);
 }

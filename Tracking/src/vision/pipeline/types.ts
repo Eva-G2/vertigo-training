@@ -1,5 +1,6 @@
 import type { EyeTrackingSample } from "@/types/eye-tracking";
 import type { FaceLandmarkPoint } from "@/types/face-mesh-frame";
+import { TrackingStateManager } from "@/services/tracking/TrackingStateManager";
 
 export type VisionPipelineStatus =
   | "idle"
@@ -22,7 +23,7 @@ export type VisionFrameInput = {
 };
 
 export type VisionPipelineResult = {
-  sample: EyeTrackingSample;
+  sample: EyeTrackingSample | null;
   faceLandmarks: FaceLandmarkPoint[] | null;
   processedCanvas?: HTMLCanvasElement;
 };

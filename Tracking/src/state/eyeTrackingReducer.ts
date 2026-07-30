@@ -13,6 +13,7 @@ export const initialEyeTrackingState: EyeTrackingState = {
   movementRecordCount: 0,
   verticalPursuitRecordCount: 0,
   verticalPursuitDataset: null,
+  pursuitAxis: "vertical",
   maxSamples: MAX_SAMPLES,
 };
 
@@ -31,6 +32,14 @@ export function eyeTrackingReducer(
         movementRecordCount: 0,
         verticalPursuitRecordCount: 0,
         verticalPursuitDataset: null,
+      };
+
+    case "SESSION_LABEL_UPDATE":
+      return {
+        ...state,
+        session: state.session
+          ? { ...state.session, label: action.payload }
+          : state.session,
       };
 
     case "SESSION_END":
@@ -104,6 +113,7 @@ export function eyeTrackingReducer(
         ...state,
         verticalPursuitRecordCount: 0,
         verticalPursuitDataset: null,
+        pursuitAxis: action.payload ?? "vertical",
       };
 
     case "VERTICAL_PURSUIT_FINALIZE":

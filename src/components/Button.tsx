@@ -28,10 +28,10 @@ export function Button({
 
   const variants = {
     primary: isDark
-      ? "border-yellow bg-card text-yellow hover:bg-yellow hover:text-dark-blue"
+      ? "border-yellow bg-card text-yellow hover:bg-yellow hover:text-[#111D4D]"
       : "border-blue bg-card text-blue hover:bg-blue hover:text-white",
     secondary: isDark
-      ? "border-yellow bg-card text-yellow hover:bg-yellow hover:text-dark-blue"
+      ? "border-yellow bg-card text-yellow hover:bg-yellow hover:text-[#111D4D]"
       : "border-blue bg-card text-blue hover:bg-blue hover:text-white",
     selected:
       "border-cyan bg-cyan text-white hover:bg-cyan/90",

@@ -1,6 +1,6 @@
 import { useEyeTracking } from "@/state";
 import { DEFAULT_SINE_STIMULUS } from "@/services/processing";
-import { EyePositionChart } from "./EyePositionChart";
+import { TrackingGraph } from "@/components/tracking/TrackingGraph";
 import { GazeStabilityChart } from "./GazeStabilityChart";
 import { HeadTiltChart } from "./HeadTiltChart";
 
@@ -12,6 +12,8 @@ export function DiagnosticDashboard() {
     recordingStatus,
     pipelineStatus,
     movementRecordCount,
+    verticalPursuitRecordCount,
+    pursuitAxis,
   } = state;
 
   return (
@@ -38,6 +40,11 @@ export function DiagnosticDashboard() {
           <span className="rounded-full bg-yellow/30 px-3 py-1 text-dark-blue">
             Movement: {movementRecordCount}
           </span>
+          {verticalPursuitRecordCount > 0 && (
+            <span className="rounded-full bg-cyan/15 px-3 py-1 text-cyan">
+              Vertical: {verticalPursuitRecordCount}
+            </span>
+          )}
         </div>
       </header>
 
@@ -59,19 +66,23 @@ export function DiagnosticDashboard() {
       {latestSample && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
-            label="Left gaze (H)"
+            label="Left corrected (H)"
             value={
-              latestSample.leftCalibratedOffset && state.calibration.isCalibrated
-                ? `${latestSample.leftCalibratedOffset.horizontalDeg.toFixed(2)}°`
-                : latestSample.leftEye.horizontal.toFixed(3)
+              latestSample.leftEyeCorrected
+                ? `${latestSample.leftEyeCorrected.horizontal.toFixed(2)}°`
+                : latestSample.leftCalibratedOffset && state.calibration.isCalibrated
+                  ? `${latestSample.leftCalibratedOffset.horizontalDeg.toFixed(2)}°`
+                  : latestSample.leftEye.horizontal.toFixed(3)
             }
           />
           <MetricCard
-            label="Right gaze (H)"
+            label="Right corrected (H)"
             value={
-              latestSample.rightCalibratedOffset && state.calibration.isCalibrated
-                ? `${latestSample.rightCalibratedOffset.horizontalDeg.toFixed(2)}°`
-                : latestSample.rightEye.horizontal.toFixed(3)
+              latestSample.rightEyeCorrected
+                ? `${latestSample.rightEyeCorrected.horizontal.toFixed(2)}°`
+                : latestSample.rightCalibratedOffset && state.calibration.isCalibrated
+                  ? `${latestSample.rightCalibratedOffset.horizontalDeg.toFixed(2)}°`
+                  : latestSample.rightEye.horizontal.toFixed(3)
             }
           />
           <MetricCard
@@ -89,13 +100,13 @@ export function DiagnosticDashboard() {
         </div>
       )}
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <EyePositionChart
-          samples={samples}
-          isCalibrated={state.calibration.isCalibrated}
-        />
-        <GazeStabilityChart samples={samples} />
-        <HeadTiltChart samples={samples} className="lg:col-span-2" />
+      <div className="flex min-w-0 flex-col gap-4">
+        <TrackingGraph axis="vertical" exerciseMode={pursuitAxis} />
+        <TrackingGraph axis="horizontal" exerciseMode={pursuitAxis} />
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+          <GazeStabilityChart samples={samples} />
+          <HeadTiltChart samples={samples} />
+        </div>
       </div>
     </section>
   );

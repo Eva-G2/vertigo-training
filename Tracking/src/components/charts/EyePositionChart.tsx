@@ -1,6 +1,7 @@
 import type { EyeTrackingSample } from "@/types/eye-tracking";
 import { sampleElapsedSeconds } from "./chartTime";
 import { LineChart } from "./LineChart";
+import { themeBlue, themeDarkBlue } from "@/lib/themeColors";
 
 /** Display range for calibrated horizontal gaze (degrees). */
 const CHART_RANGE_DEG = 60;
@@ -71,7 +72,7 @@ export function EyePositionChart({
           label: useCalibrated
             ? "Left offset from baseline"
             : "Left eye",
-          color: "#2949cc",
+          color: themeBlue(),
           values: leftValues,
         },
         {

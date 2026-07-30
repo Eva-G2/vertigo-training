@@ -1,10 +1,12 @@
 import { EyeMovementGraph } from "./EyeMovementGraph";
+import { type AnalyticsCopy, DEFAULT_ANALYTICS_COPY } from "./analyticsCopy";
 
 type TrackingAnalyticsModalProps = {
   open: boolean;
   title: string;
   closeLabel: string;
   onClose: () => void;
+  copy?: AnalyticsCopy;
 };
 
 export function TrackingAnalyticsModal({
@@ -12,17 +14,18 @@ export function TrackingAnalyticsModal({
   title,
   closeLabel,
   onClose,
+  copy = DEFAULT_ANALYTICS_COPY,
 }: TrackingAnalyticsModalProps) {
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dark-blue/60 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-dark-blue/60 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="tracking-analytics-title"
     >
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[20px] border-[3px] border-blue bg-card shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-[20px] border-[3px] border-blue bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-blue/20 px-6 py-4">
           <h2
             id="tracking-analytics-title"
@@ -40,7 +43,7 @@ export function TrackingAnalyticsModal({
         </div>
 
         <div className="overflow-y-auto px-6 py-4">
-          <EyeMovementGraph />
+          <EyeMovementGraph copy={copy} />
         </div>
       </div>
     </div>

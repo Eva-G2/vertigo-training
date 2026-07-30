@@ -12,6 +12,10 @@ function recordToDegreesVector(
   source: "target" | "actual",
   stimulusAmplitude: number,
 ): number[] {
+  if (source === "actual" && record.correctedActual) {
+    return [record.correctedActual.x, record.correctedActual.y];
+  }
+
   const point = source === "target" ? record.target : record.actual;
   return [
     normalizedToDegrees(point.x, stimulusAmplitude),

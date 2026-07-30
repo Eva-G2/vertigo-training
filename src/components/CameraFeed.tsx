@@ -3,18 +3,36 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CameraPermissionModal } from "./CameraPermissionModal";
 import { HeadSilhouetteOverlay } from "./HeadSilhouetteOverlay";
+import { ShoulderPoseOverlay } from "./ShoulderPoseOverlay";
 import { useApp } from "./providers/AppProvider";
 import { t } from "@/lib/i18n";
 
 type CameraFeedProps = {
   showBottomMarker?: boolean;
+  /**
+   * Mirror the live preview horizontally (same correction as Stage 1/2
+   * TrackingEnabledVideo / calibration camera).
+   */
+  mirrorPreview?: boolean;
+  /**
+   * Keep a single letter A at the calibration origin (viewport center)
+   * for the whole session, without top/bottom silhouette markers.
+   */
+  showCalibrationOriginMarker?: boolean;
+  /** Track and mark the two shoulder landmarks with MediaPipe Pose. */
+  trackShoulders?: boolean;
   className?: string;
 };
 
 type CameraState = "pending" | "prompt" | "active" | "denied" | "error";
 
+const MARKER_SHADOW = "2px 5px 6px rgba(0, 0, 0, 0.5)";
+
 export function CameraFeed({
   showBottomMarker = false,
+  mirrorPreview = false,
+  showCalibrationOriginMarker = false,
+  trackShoulders = false,
   className = "",
 }: CameraFeedProps) {
   const { state } = useApp();
@@ -79,7 +97,7 @@ export function CameraFeed({
   return (
     <>
       <div
-        className={`relative aspect-[4/3] w-full max-w-3xl overflow-hidden rounded-[20px] border-[3px] border-blue bg-dark-blue/10 ${className}`}
+        className={`relative w-full overflow-hidden rounded-[20px] border-[3px] border-blue bg-dark-blue/10 ${className || "aspect-[4/3]"}`}
       >
         {cameraState === "active" ? (
           <video
@@ -87,7 +105,9 @@ export function CameraFeed({
             autoPlay
             playsInline
             muted
-            className="h-full w-full object-cover"
+            className={`h-full w-full object-cover ${
+              mirrorPreview ? "-scale-x-100" : ""
+            }`}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-dark-blue/20">
@@ -102,8 +122,32 @@ export function CameraFeed({
         )}
 
         {(cameraState === "active" || cameraState === "pending") && (
-          <HeadSilhouetteOverlay showBottomMarker={showBottomMarker} />
+          <HeadSilhouetteOverlay
+            showBottomMarker={
+              showBottomMarker && !showCalibrationOriginMarker
+            }
+            useHeadIcon={showCalibrationOriginMarker}
+          />
         )}
+
+        {trackShoulders && cameraState === "active" && (
+          <ShoulderPoseOverlay videoRef={videoRef} />
+        )}
+
+        {showCalibrationOriginMarker &&
+          (cameraState === "active" || cameraState === "pending") && (
+            <div
+              className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+              aria-hidden="true"
+            >
+              <span
+                className="block text-6xl font-extrabold text-blue"
+                style={{ textShadow: MARKER_SHADOW }}
+              >
+                A
+              </span>
+            </div>
+          )}
       </div>
 
       {cameraState === "prompt" && (

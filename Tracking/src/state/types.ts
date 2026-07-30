@@ -1,4 +1,4 @@
-import type { VerticalPursuitDataset } from "@/services/analytics";
+import type { PursuitAxis, VerticalPursuitDataset } from "@/services/analytics";
 import type {
   EyeTrackingSample,
   FovCalibrationState,
@@ -20,11 +20,13 @@ export type EyeTrackingState = {
   movementRecordCount: number;
   verticalPursuitRecordCount: number;
   verticalPursuitDataset: VerticalPursuitDataset | null;
+  pursuitAxis: PursuitAxis;
   maxSamples: number;
 };
 
 export type EyeTrackingAction =
   | { type: "SESSION_START"; payload: TrackingSession }
+  | { type: "SESSION_LABEL_UPDATE"; payload: string }
   | { type: "SESSION_END" }
   | { type: "RECORDING_START" }
   | { type: "RECORDING_PAUSE" }
@@ -38,5 +40,5 @@ export type EyeTrackingAction =
   | { type: "MOVEMENT_RECORD"; payload: number }
   | { type: "MOVEMENT_RESET" }
   | { type: "VERTICAL_PURSUIT_RECORD"; payload: number }
-  | { type: "VERTICAL_PURSUIT_RESET" }
+  | { type: "VERTICAL_PURSUIT_RESET"; payload?: PursuitAxis }
   | { type: "VERTICAL_PURSUIT_FINALIZE"; payload: VerticalPursuitDataset };

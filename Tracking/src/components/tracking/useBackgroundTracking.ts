@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { TrackingService } from "@/services/tracking";
+import type { GazeRecenterBaseline, TrackingService } from "@/services/tracking";
 import { useEyeTracking } from "@/state";
 import type { PrepCalibrationPayload } from "./injectPrepCalibration";
 
@@ -7,6 +7,7 @@ type UseBackgroundTrackingOptions = {
   trackingService: TrackingService | null;
   isRunning: boolean;
   prepCalibration: PrepCalibrationPayload | null;
+  gazeRecenterBaseline?: GazeRecenterBaseline | null;
   sessionLabel?: string;
   /** When false, calibration is injected but recording waits for a manual trigger. */
   autoStartRecording?: boolean;
@@ -20,6 +21,7 @@ export function useBackgroundTracking({
   trackingService,
   isRunning,
   prepCalibration,
+  gazeRecenterBaseline = null,
   sessionLabel = "Stage 1 Step 1 demo",
   autoStartRecording = true,
 }: UseBackgroundTrackingOptions) {
@@ -29,10 +31,13 @@ export function useBackgroundTracking({
     endSession,
     pauseRecording,
     applyPrepCalibration,
+    applyRecenterBaseline,
     state,
   } = useEyeTracking();
   const startedRef = useRef(false);
   const calibrationInjectedRef = useRef(false);
+  const trackingStateRef = useRef(state);
+  trackingStateRef.current = state;
 
   useEffect(() => {
     if (!trackingService || !prepCalibration || calibrationInjectedRef.current) {
@@ -48,11 +53,20 @@ export function useBackgroundTracking({
         leftBaseline: prepCalibration.leftBaseline ?? undefined,
         rightBaseline: prepCalibration.rightBaseline ?? undefined,
       });
+      if (gazeRecenterBaseline) {
+        applyRecenterBaseline(gazeRecenterBaseline);
+      }
       calibrationInjectedRef.current = true;
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [applyPrepCalibration, prepCalibration, trackingService]);
+  }, [
+    applyPrepCalibration,
+    applyRecenterBaseline,
+    gazeRecenterBaseline,
+    prepCalibration,
+    trackingService,
+  ]);
 
   useEffect(() => {
     if (
@@ -66,10 +80,11 @@ export function useBackgroundTracking({
     }
 
     const frameId = requestAnimationFrame(() => {
-      if (!state.session) {
+      const { session, recordingStatus } = trackingStateRef.current;
+      if (!session) {
         startSession(sessionLabel);
       }
-      if (state.recordingStatus !== "recording") {
+      if (recordingStatus !== "recording") {
         startRecording();
       }
       startedRef.current = true;
@@ -83,8 +98,6 @@ export function useBackgroundTracking({
     sessionLabel,
     startRecording,
     startSession,
-    state.recordingStatus,
-    state.session,
     trackingService,
   ]);
 

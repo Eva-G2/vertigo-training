@@ -39,6 +39,7 @@ export async function acquireVisionPipeline(
 
 export function releaseVisionPipeline(): void {
   consumerCount = Math.max(0, consumerCount - 1);
+  sharedPipeline?.getTrackingService().stopTracking();
   sharedPipeline?.stop();
 }
 

@@ -43,18 +43,34 @@ function detectEyeSaccades(
     const deltaMs = current.timestamp - previous.timestamp;
     if (deltaMs <= 0) continue;
 
-    const previousPoint = eye === "left" ? previous.leftEye : previous.rightEye;
-    const currentPoint = eye === "left" ? current.leftEye : current.rightEye;
+    const useCorrected =
+      eye === "left"
+        ? current.correctedLeftEye && previous.correctedLeftEye
+        : current.correctedRightEye && previous.correctedRightEye;
+
+    const previousPoint = useCorrected
+      ? eye === "left"
+        ? previous.correctedLeftEye!
+        : previous.correctedRightEye!
+      : eye === "left"
+        ? previous.leftEye
+        : previous.rightEye;
+    const currentPoint = useCorrected
+      ? eye === "left"
+        ? current.correctedLeftEye!
+        : current.correctedRightEye!
+      : eye === "left"
+        ? current.leftEye
+        : current.rightEye;
 
     const velocity = computeMovementVelocity(
       previousPoint,
       currentPoint,
       deltaMs,
     );
-    const speedDegPerSec = normalizedSpeedToDegreesPerSec(
-      velocity.speed,
-      stimulusAmplitude,
-    );
+    const speedDegPerSec = useCorrected
+      ? velocity.speed
+      : normalizedSpeedToDegreesPerSec(velocity.speed, stimulusAmplitude);
 
     if (speedDegPerSec >= config.velocityThresholdDegPerSec) {
       saccades.push({
@@ -62,7 +78,9 @@ function detectEyeSaccades(
         elapsedMs: current.elapsedMs,
         eye,
         speedDegPerSec,
-        positionDeg: toPositionDeg(currentPoint, stimulusAmplitude),
+        positionDeg: useCorrected
+          ? { ...currentPoint }
+          : toPositionDeg(currentPoint, stimulusAmplitude),
       });
     }
   }

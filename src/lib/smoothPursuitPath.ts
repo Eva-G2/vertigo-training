@@ -1,7 +1,7 @@
 export type SmoothPursuitChirpConfig = {
-  /** Initial frequency in Hz (5 s per cycle = 0.2 Hz). */
+  /** Initial frequency in Hz (6 s per cycle = 1/6 Hz). */
   f0: number;
-  /** Maximum frequency in Hz (0.5 s per cycle = 2 Hz). */
+  /** Maximum frequency in Hz (1 s per cycle = 1 Hz). */
   fMax: number;
   /** Total number of oscillation cycles before termination. */
   totalCycles: number;
@@ -9,8 +9,8 @@ export type SmoothPursuitChirpConfig = {
 };
 
 export const DEFAULT_SMOOTH_PURSUIT_CHIRP: SmoothPursuitChirpConfig = {
-  f0: 0.2,
-  fMax: 2,
+  f0: 1 / 6,
+  fMax: 1,
   totalCycles: 20,
   postGoDelayMs: 300,
 };
@@ -64,11 +64,7 @@ export function getInstantaneousFrequency(
   return f0 + k * elapsedSeconds;
 }
 
-/**
- * Vertical chirp position mapped to [0, containerHeight]:
- * y = Y_center + A * sin(2π * (f0 * t + (k / 2) * t²))
- */
-export function computeSmoothPursuitY(
+function computeChirpPosition(
   elapsedSeconds: number,
   params: SmoothPursuitChirpParams,
 ): number {
@@ -79,4 +75,34 @@ export function computeSmoothPursuitY(
       (params.k / 2) * Math.pow(elapsedSeconds, 2));
 
   return params.yCenter + params.amplitude * Math.sin(phase);
+}
+
+/**
+ * Vertical chirp position mapped to [0, containerHeight]:
+ * y = Y_center + A * sin(2π * (f0 * t + (k / 2) * t²))
+ */
+export function computeSmoothPursuitY(
+  elapsedSeconds: number,
+  params: SmoothPursuitChirpParams,
+): number {
+  return computeChirpPosition(elapsedSeconds, params);
+}
+
+/**
+ * Horizontal chirp position mapped to [0, containerWidth]:
+ * x = X_center + A * sin(2π * (f0 * t + (k / 2) * t²))
+ */
+export function computeSmoothPursuitX(
+  elapsedSeconds: number,
+  params: SmoothPursuitChirpParams,
+): number {
+  return computeChirpPosition(elapsedSeconds, params);
+}
+
+/** Builds chirp params for horizontal pursuit using viewport width. */
+export function buildSmoothPursuitChirpHorizontal(
+  containerWidth: number,
+  config: SmoothPursuitChirpConfig = DEFAULT_SMOOTH_PURSUIT_CHIRP,
+): SmoothPursuitChirpParams {
+  return buildSmoothPursuitChirp(containerWidth, config);
 }

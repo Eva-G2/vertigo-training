@@ -7,6 +7,8 @@ import { LanguageModal } from "./LanguageModal";
 import {
   AppLogo,
   DarkModeIcon,
+  EyeClosedIcon,
+  EyeOpenIcon,
   LanguageIcon,
   LightModeIcon,
   SoundOffIcon,
@@ -17,24 +19,28 @@ type AppShellProps = {
   children: ReactNode;
   disableLogoLink?: boolean;
   showSound?: boolean;
+  /** When false, hides the bone-landmark visibility toggle. Defaults to true. */
+  showBoneLandmarkToggle?: boolean;
 };
 
 export function AppShell({
   children,
   disableLogoLink = false,
   showSound = true,
+  showBoneLandmarkToggle = true,
 }: AppShellProps) {
   const {
     state,
     toggleTheme,
     toggleSound,
+    toggleBoneLandmarks,
     setLocale,
     showLanguageModal,
     openLanguageModal,
     closeLanguageModal,
   } = useApp();
 
-  const { theme, sound } = state;
+  const { theme, sound, showBoneLandmarks } = state;
   const isDark = theme === "dark";
 
   const logo = <AppLogo theme={theme} />;
@@ -53,6 +59,21 @@ export function AppShell({
         </div>
 
         <div className="flex items-center gap-3">
+          {showBoneLandmarkToggle && (
+            <ChromeButton
+              id="bone-landmarks-btn"
+              onClick={toggleBoneLandmarks}
+              bg="var(--chrome-landmarks-bg)"
+              title={
+                showBoneLandmarks
+                  ? "Hide face landmark dots"
+                  : "Show face landmark dots"
+              }
+            >
+              {showBoneLandmarks ? <EyeOpenIcon /> : <EyeClosedIcon />}
+            </ChromeButton>
+          )}
+
           <ChromeButton
             id="language-btn"
             onClick={openLanguageModal}
@@ -84,7 +105,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col px-8 pb-8">
+      <main className="mx-auto flex w-full max-w-[1280px] min-h-0 flex-1 flex-col px-8 pb-8">
         {children}
       </main>
 

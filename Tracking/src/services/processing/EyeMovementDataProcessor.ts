@@ -1,4 +1,5 @@
 import type { EyeTrackingSample, Point2D } from "@/types/eye-tracking";
+import { TrackingStateManager } from "@/services/tracking/TrackingStateManager";
 import {
   computeMovementRotation,
   computeMovementVelocity,
@@ -15,14 +16,30 @@ import type {
   SineWaveStimulusConfig,
 } from "./types";
 
-function extractLeftEyePosition(sample: EyeTrackingSample): Point2D | null {
+function extractRawLeftEyePosition(sample: EyeTrackingSample): Point2D | null {
   if (!sample.leftIris) return null;
   return { ...sample.leftIris.offsetFromEyeCenter };
 }
 
-function extractRightEyePosition(sample: EyeTrackingSample): Point2D | null {
+function extractRawRightEyePosition(sample: EyeTrackingSample): Point2D | null {
   if (!sample.rightIris) return null;
   return { ...sample.rightIris.offsetFromEyeCenter };
+}
+
+function extractCorrectedLeftEye(sample: EyeTrackingSample): Point2D | null {
+  if (sample.leftEyeCorrected == null) return null;
+  return {
+    x: sample.leftEyeCorrected.horizontal,
+    y: sample.leftEyeCorrected.vertical,
+  };
+}
+
+function extractCorrectedRightEye(sample: EyeTrackingSample): Point2D | null {
+  if (sample.rightEyeCorrected == null) return null;
+  return {
+    x: sample.rightEyeCorrected.horizontal,
+    y: sample.rightEyeCorrected.vertical,
+  };
 }
 
 function averageEyes(left: Point2D, right: Point2D): Point2D {
@@ -73,15 +90,25 @@ export class EyeMovementDataProcessor {
    * data against the target sine-wave path.
    */
   record(sample: EyeTrackingSample): MovementComparisonRecord | null {
+    if (!TrackingStateManager.isActive) {
+      return null;
+    }
+
     if (!this.active || !sample.faceDetected) {
       return null;
     }
 
-    const leftEye = extractLeftEyePosition(sample);
-    const rightEye = extractRightEyePosition(sample);
+    const leftEye = extractRawLeftEyePosition(sample);
+    const rightEye = extractRawRightEyePosition(sample);
+    const correctedLeftEye = extractCorrectedLeftEye(sample);
+    const correctedRightEye = extractCorrectedRightEye(sample);
     if (!leftEye || !rightEye) return null;
 
     const actual = averageEyes(leftEye, rightEye);
+    const correctedActual =
+      correctedLeftEye && correctedRightEye
+        ? averageEyes(correctedLeftEye, correctedRightEye)
+        : null;
     const elapsedMs = sample.timestamp - this.startedAt;
     const target = getSineWaveTargetPosition(elapsedMs, this.stimulus);
 
@@ -118,7 +145,10 @@ export class EyeMovementDataProcessor {
       target,
       leftEye,
       rightEye,
+      correctedLeftEye,
+      correctedRightEye,
       actual,
+      correctedActual,
       error: errorVector,
       velocity,
       rotation,

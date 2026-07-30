@@ -47,8 +47,10 @@ export function useVisionPipeline(
         onResult: ({ sample, faceLandmarks }) => {
           const callbacks = callbacksRef.current;
           callbacks.updateFaceLandmarks(faceLandmarks);
-          callbacks.ingestSample(sample);
-          callbacks.recordMovementSample(sample);
+          if (sample) {
+            callbacks.ingestSample(sample);
+            callbacks.recordMovementSample(sample);
+          }
         },
         onStatusChange: (nextStatus) => {
           setStatus(nextStatus);
@@ -88,8 +90,10 @@ export function useVisionPipeline(
         onResult: ({ sample, faceLandmarks }) => {
           const callbacks = callbacksRef.current;
           callbacks.updateFaceLandmarks(faceLandmarks);
-          callbacks.ingestSample(sample);
-          callbacks.recordMovementSample(sample);
+          if (sample) {
+            callbacks.ingestSample(sample);
+            callbacks.recordMovementSample(sample);
+          }
         },
         onStatusChange: (nextStatus) => {
           setStatus(nextStatus);

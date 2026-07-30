@@ -56,6 +56,8 @@ export class FovCalibrator {
     isCalibrated: false,
     leftBaseline: { x: 0, y: 0 },
     rightBaseline: { x: 0, y: 0 },
+    faceTopNormalizedY: null,
+    chinNormalizedY: null,
     kL: 0,
     kR: 0,
     kLY: 0,
@@ -75,6 +77,8 @@ export class FovCalibrator {
     target: FovCalibrationTarget,
     leftRaw: Point2D,
     rightRaw: Point2D,
+    faceTopNormalizedY?: number,
+    chinNormalizedY?: number,
   ): void {
     const sample: FovCalibrationSample = {
       target,
@@ -91,6 +95,22 @@ export class FovCalibrator {
       this.model.samples[existingIndex] = sample;
     } else {
       this.model.samples.push(sample);
+    }
+
+    if (
+      target.label === "center" &&
+      faceTopNormalizedY != null &&
+      Number.isFinite(faceTopNormalizedY)
+    ) {
+      this.model.faceTopNormalizedY = faceTopNormalizedY;
+    }
+
+    if (
+      target.label === "center" &&
+      chinNormalizedY != null &&
+      Number.isFinite(chinNormalizedY)
+    ) {
+      this.model.chinNormalizedY = chinNormalizedY;
     }
 
     this.model.isCalibrated = false;
@@ -207,6 +227,8 @@ export class FovCalibrator {
     kRY: number;
     leftBaseline?: PupilPixelBaseline;
     rightBaseline?: PupilPixelBaseline;
+    faceTopNormalizedY?: number | null;
+    chinNormalizedY?: number | null;
   }): void {
     this.model.kL = params.kL;
     this.model.kR = params.kR;
@@ -214,6 +236,8 @@ export class FovCalibrator {
     this.model.kRY = params.kRY;
     this.model.leftBaseline = params.leftBaseline ?? { x: 0, y: 0 };
     this.model.rightBaseline = params.rightBaseline ?? { x: 0, y: 0 };
+    this.model.faceTopNormalizedY = params.faceTopNormalizedY ?? null;
+    this.model.chinNormalizedY = params.chinNormalizedY ?? null;
     this.model.isCalibrated = true;
   }
 
@@ -222,6 +246,8 @@ export class FovCalibrator {
       isCalibrated: false,
       leftBaseline: { x: 0, y: 0 },
       rightBaseline: { x: 0, y: 0 },
+      faceTopNormalizedY: null,
+    chinNormalizedY: null,
       kL: 0,
       kR: 0,
       kLY: 0,

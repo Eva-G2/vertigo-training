@@ -1,4 +1,12 @@
 import type { Locale } from "./types";
+import {
+  DEFAULT_ANALYTICS_COPY,
+  type AnalyticsCopy,
+} from "@/components/tracking/analyticsCopy";
+import {
+  DEFAULT_CALIBRATION_COPY,
+  type CalibrationCopy,
+} from "@/components/camera/calibrationCopy";
 
 type Copy = {
   appTitle: string;
@@ -15,11 +23,22 @@ type Copy = {
   stagePrepare: string;
   stageStep: string;
   stage1Step1Title: string;
+  stage1Step2Title: string;
+  stage1Step3Title: string;
+  stage2Step1Title: string;
+  stage2Step2Title: string;
+  stage3Step1Title: string;
+  stage3Step2Title: string;
+  stage3Step3Title: string;
   continue: string;
   next: string;
   congratsTitle: string;
   completion: string;
   accuracy: string;
+  timeLagged: string;
+  timeLag: string;
+  leftTurn: string;
+  rightTurn: string;
   averageAngle: string;
   disclaimer: string;
   terms: string;
@@ -29,6 +48,8 @@ type Copy = {
   returnHome: string;
   logout: string;
   restart: string;
+  continueToStage2: string;
+  continueToStage3: string;
   selectLanguage: string;
   english: string;
   traditionalChinese: string;
@@ -49,6 +70,9 @@ type Copy = {
   viewTrackingAnalytics: string;
   closeAnalytics: string;
   trackAInstruction: string;
+  lookAtLetterAInstruction: string;
+  shoulderRotationInstruction: string;
+  vergenceInstruction: string;
   countdownReady: string;
   countdownGo: string;
   placeholder: string;
@@ -70,11 +94,22 @@ const copy: Record<Locale, Copy> = {
     stagePrepare: "Stage {n}: Prepare",
     stageStep: "Stage {n}: Step {m}",
     stage1Step1Title: "Stage 1: Step 1- Smooth Pursuit (vertical)",
+    stage1Step2Title: "Stage 1 Step 2 - Smooth Pursuit (horizontal)",
+    stage1Step3Title: "Stage 1: Step 3 - Visual Tracking Exercise",
+    stage2Step1Title: "Stage 2: Step 1 - Nodding",
+    stage2Step2Title: "Stage 2: Step 2 - Turning",
+    stage3Step1Title: "Stage 3: Step 1 - Shoulder Shrugs",
+    stage3Step2Title: "Stage 3: Step 2 - Shoulder Rotations",
+    stage3Step3Title: "Stage 3: Step 3 - Waist Twists",
     continue: "Continue",
     next: "Next",
     congratsTitle: "Way to go!",
     completion: "Completion",
     accuracy: "Accuracy",
+    timeLagged: "Time lagged",
+    timeLag: "Time Lag",
+    leftTurn: "Left Turn",
+    rightTurn: "Right Turn",
     averageAngle: "Average angle",
     disclaimer:
       "This is a self-practice tool based on CUHK guidelines. It is NOT a substitute for medical advice. Stop immediately if symptoms worsen.",
@@ -86,6 +121,8 @@ const copy: Record<Locale, Copy> = {
     returnHome: "Return Home",
     logout: "Log Out",
     restart: "Restart Stage",
+    continueToStage2: "Continue to Stage 2",
+    continueToStage3: "Continue to Stage 3",
     selectLanguage: "Select Language",
     english: "English",
     traditionalChinese: "繁體中文",
@@ -112,6 +149,11 @@ const copy: Record<Locale, Copy> = {
     viewTrackingAnalytics: "View Tracking Analytics",
     closeAnalytics: "Close",
     trackAInstruction: "Track the 'A' with your eyes.",
+    lookAtLetterAInstruction: "Look at the letter A",
+    shoulderRotationInstruction:
+      "Look at the letter A, rotate shoulder when hearing the beep sound",
+    vergenceInstruction:
+      "Look at your finger, move finger following the rhythm",
     countdownReady: "Ready?",
     countdownGo: "GO!",
     placeholder: "Insert text here",
@@ -131,11 +173,22 @@ const copy: Record<Locale, Copy> = {
     stagePrepare: "第一級：準備",
     stageStep: "第一級：第{m}部分",
     stage1Step1Title: "第一級：第1部分 - 垂直平滑追視",
+    stage1Step2Title: "第一級：第2部分 - 水平平滑追視",
+    stage1Step3Title: "第一級：第3部分 - 視覺追蹤練習",
+    stage2Step1Title: "第二級：第1部分 - 點頭",
+    stage2Step2Title: "第二級：第2部分 - 轉頭",
+    stage3Step1Title: "第三級：第1部分 - 聳肩",
+    stage3Step2Title: "第三級：第2部分 - 肩膊轉圈",
+    stage3Step3Title: "第三級：第3部分 - 腰部左右轉",
     continue: "繼續",
     next: "下一步",
     congratsTitle: "做得好！",
     completion: "完成度",
     accuracy: "準確度",
+    timeLagged: "反應延遲",
+    timeLag: "反應延遲",
+    leftTurn: "向左轉",
+    rightTurn: "向右轉",
     averageAngle: "平均角度",
     disclaimer:
       "此乃根據中大指引而設的自我練習工具，並非醫療建議的替代品。如症狀惡化，請立即停止。",
@@ -146,6 +199,8 @@ const copy: Record<Locale, Copy> = {
     returnHome: "返回主頁",
     logout: "登出",
     restart: "重新開始",
+    continueToStage2: "繼續第二級",
+    continueToStage3: "繼續第三級",
     selectLanguage: "選擇語言",
     english: "English",
     traditionalChinese: "繁體中文",
@@ -166,6 +221,9 @@ const copy: Record<Locale, Copy> = {
     viewTrackingAnalytics: "查看追蹤分析",
     closeAnalytics: "關閉",
     trackAInstruction: "用眼睛追蹤「A」。",
+    lookAtLetterAInstruction: "請注視字母 A",
+    shoulderRotationInstruction: "請注視字母 A，聽到嗶聲時轉動肩膊",
+    vergenceInstruction: "看著手指，跟隨節奏移動手指。",
     countdownReady: "準備好了嗎？",
     countdownGo: "開始！",
     placeholder: "請輸入文字",
@@ -185,11 +243,22 @@ const copy: Record<Locale, Copy> = {
     stagePrepare: "第一级：准备",
     stageStep: "第一级：第{m}部分",
     stage1Step1Title: "第一级：第1部分 - 垂直平滑追视",
+    stage1Step2Title: "第一级：第2部分 - 水平平滑追视",
+    stage1Step3Title: "第一级：第3部分 - 视觉追踪练习",
+    stage2Step1Title: "第二级：第1部分 - 点头",
+    stage2Step2Title: "第二级：第2部分 - 转头",
+    stage3Step1Title: "第三级：第1部分 - 耸肩",
+    stage3Step2Title: "第三级：第2部分 - 肩膀绕圈",
+    stage3Step3Title: "第三级：第3部分 - 腰部左右转",
     continue: "继续",
     next: "下一步",
     congratsTitle: "做得好！",
     completion: "完成度",
     accuracy: "准确度",
+    timeLagged: "反应延迟",
+    timeLag: "反应延迟",
+    leftTurn: "向左转",
+    rightTurn: "向右转",
     averageAngle: "平均角度",
     disclaimer:
       "此乃根据中大指引而设的自我练习工具，并非医疗建议的替代品。如症状恶化，请立即停止。",
@@ -200,6 +269,8 @@ const copy: Record<Locale, Copy> = {
     returnHome: "返回主页",
     logout: "登出",
     restart: "重新开始",
+    continueToStage2: "继续第二级",
+    continueToStage3: "继续第三级",
     selectLanguage: "选择语言",
     english: "English",
     traditionalChinese: "繁體中文",
@@ -220,6 +291,9 @@ const copy: Record<Locale, Copy> = {
     viewTrackingAnalytics: "查看追踪分析",
     closeAnalytics: "关闭",
     trackAInstruction: "用眼睛追踪「A」。",
+    lookAtLetterAInstruction: "请注视字母 A",
+    shoulderRotationInstruction: "请注视字母 A，听到哔声时转动肩膀",
+    vergenceInstruction: "看着手指，跟随节奏移动手指。",
     countdownReady: "准备好了吗？",
     countdownGo: "开始！",
     placeholder: "请输入文字",
@@ -231,8 +305,19 @@ export function t(locale: Locale, key: keyof Copy): string {
 }
 
 export function formatStagePrepare(locale: Locale, stage: number): string {
-  const template = copy[locale].stagePrepare;
-  return template.replace("{n}", String(stage));
+  if (locale === "zh-Hant") {
+    if (stage === 2) return "第二級：準備";
+    if (stage === 3) return "第三級：準備";
+    return copy[locale].stagePrepare;
+  }
+
+  if (locale === "zh-Hans") {
+    if (stage === 2) return "第二级：准备";
+    if (stage === 3) return "第三级：准备";
+    return copy[locale].stagePrepare;
+  }
+
+  return copy[locale].stagePrepare.replace("{n}", String(stage));
 }
 
 export function formatStageStep(
@@ -244,6 +329,232 @@ export function formatStageStep(
     return copy[locale].stage1Step1Title;
   }
 
+  if (stage === 1 && step === 2) {
+    return copy[locale].stage1Step2Title;
+  }
+
+  if (stage === 1 && step === 3) {
+    return copy[locale].stage1Step3Title;
+  }
+
+  if (stage === 2 && step === 1) {
+    return copy[locale].stage2Step1Title;
+  }
+
+  if (stage === 2 && step === 2) {
+    return copy[locale].stage2Step2Title;
+  }
+
+  if (stage === 3 && step === 1) {
+    return copy[locale].stage3Step1Title;
+  }
+
+  if (stage === 3 && step === 2) {
+    return copy[locale].stage3Step2Title;
+  }
+
+  if (stage === 3 && step === 3) {
+    return copy[locale].stage3Step3Title;
+  }
+
   const template = copy[locale].stageStep;
   return template.replace("{n}", String(stage)).replace("{m}", String(step));
+}
+
+/**
+ * Localized copy for the eye-calibration overlay. The English entry reuses the
+ * Tracking module default so the standalone build and the host app never drift.
+ */
+const calibrationCopyByLocale: Record<Locale, CalibrationCopy> = {
+  en: DEFAULT_CALIBRATION_COPY,
+  "zh-Hant": {
+    faceCamera: "請正視鏡頭以開始",
+    moveFurther: "請移遠一些",
+    moveCloser: "請靠近一些",
+    positionConfirmed: "位置已確認",
+    calibratingFov: "正在校準視野範圍…",
+    lookAtTargetReady: "請注視{target}目標，準備好後按「確認」。",
+    lookAtTarget: "請注視{target}目標",
+    distanceCheckTitle: "校準前距離檢查",
+    fovTitle: "視野校準 — 請凝視高亮的目標",
+    estimatedDistance: "估計距離",
+    targetDistance: "目標距離",
+    targetShort: "目標",
+    visualAngle: "{deg}° 視角",
+    adjustDistance: "確認下一點前，請先調整距離。",
+    captureEachPoint: "在 ±{deg}°（{target}）確認每個點",
+    capture: "確認",
+    allPointsCaptured: "已擷取所有校準點",
+    calibrateFov: "校準視野",
+    cancelCalibration: "取消校準",
+    targetNames: {
+      center: "中央",
+      left: "左方",
+      right: "右方",
+      up: "上方",
+      down: "下方",
+    },
+  },
+  "zh-Hans": {
+    faceCamera: "请正视镜头以开始",
+    moveFurther: "请移远一些",
+    moveCloser: "请靠近一些",
+    positionConfirmed: "位置已确认",
+    calibratingFov: "正在校准视野范围…",
+    lookAtTargetReady: "请注视{target}目标，准备好后点击「确认」。",
+    lookAtTarget: "请注视{target}目标",
+    distanceCheckTitle: "校准前距离检查",
+    fovTitle: "视野校准 — 请凝视高亮的目标",
+    estimatedDistance: "估计距离",
+    targetDistance: "目标距离",
+    targetShort: "目标",
+    visualAngle: "{deg}° 视角",
+    adjustDistance: "确认下一点前，请先调整距离。",
+    captureEachPoint: "在 ±{deg}°（{target}）确认每个点",
+    capture: "确认",
+    allPointsCaptured: "已捕获所有校准点",
+    calibrateFov: "校准视野",
+    cancelCalibration: "取消校准",
+    targetNames: {
+      center: "中央",
+      left: "左方",
+      right: "右方",
+      up: "上方",
+      down: "下方",
+    },
+  },
+};
+
+/**
+ * Localized copy for the tracking analytics dashboard. The English entry reuses
+ * the Tracking module default so the standalone build and host app never drift.
+ */
+const analyticsCopyByLocale: Record<Locale, AnalyticsCopy> = {
+  en: DEFAULT_ANALYTICS_COPY,
+  "zh-Hant": {
+    pipeline: "處理管線",
+    recording: "錄製",
+    samples: "樣本",
+    movement: "移動",
+    vergence: "聚散",
+    vertical: "垂直",
+    calibration: "校準",
+    injected: "已載入",
+    pending: "待處理",
+    leftCorrectedH: "左眼校正（水平）",
+    rightCorrectedH: "右眼校正（水平）",
+    stability: "穩定度",
+    fovGaze: "視野注視",
+    notCalibrated: "未校準",
+    verticalEyeMovement: "垂直眼動",
+    horizontalEyeMovement: "水平眼動",
+    switchTo: "切換至{mode}",
+    sourceRaw: "原始",
+    sourceIsolated: "校正後",
+    correctedTitle: "校正後眼動",
+    correctedSubtitle: "扣除頭部旋轉後的眼球轉動。",
+    rawTitle: "原始眼動",
+    rawSubtitle: "相對於目標、未經校正的眼動。",
+    leftEyeCorrected: "左眼（已校正）",
+    rightEyeCorrected: "右眼（已校正）",
+    leftEyeRaw: "左眼（原始）",
+    rightEyeRaw: "右眼（原始）",
+    targetPath: "目標路徑",
+    targetPosition: "目標位置",
+    calibrationRequired: "需先完成校準才能繪製追蹤數據。",
+    waitingSamples: "正在等待追蹤樣本…",
+    vergenceTracking: "聚散追蹤",
+    vergenceRequired: "需先完成校準才能繪製聚散數據。",
+    waitingVergence: "正在等待聚散追蹤樣本…",
+    convergenceAngle: "聚合角度（度）",
+    gazeStability: "注視穩定度",
+    stabilityIndex: "穩定度指數",
+    headTilt: "頭部傾斜（轉動）",
+    rollDegrees: "翻滾（度）",
+    headPitchMovement: "頭部俯仰（垂直）",
+    headYawMovement: "頭部偏航（水平）",
+    headPitchDegrees: "俯仰（度）",
+    headYawDegrees: "偏航（度）",
+    headMovementSubtitle: "相對於環節基線的頭部旋轉。可與上方眼動圖表對比。",
+    waitingHeadPose: "正在等待頭部姿態樣本…",
+    combinedHeadMovement: "合併頭部運動（俯仰與偏航）",
+    headEyeVelocity: "頭部與眼動速度",
+    headEyeVelocitySubtitle: "環節期間的角速度。",
+    headVelocity: "頭部速度",
+    eyeVelocity: "眼動速度",
+    scrollToView: "滾動以查看完整記錄",
+    shoulderVerticalMovement: "肩膀垂直移動",
+    shoulderHorizontalMovement: "肩膀水平移動",
+    shoulderMovementSubtitle: "相對於環節基線的左、右肩移動。",
+    waitingShoulderMovement: "正在等待肩膀移動樣本…",
+    leftShoulder: "左肩",
+    rightShoulder: "右肩",
+  },
+  "zh-Hans": {
+    pipeline: "处理管线",
+    recording: "录制",
+    samples: "样本",
+    movement: "移动",
+    vergence: "聚散",
+    vertical: "垂直",
+    calibration: "校准",
+    injected: "已载入",
+    pending: "待处理",
+    leftCorrectedH: "左眼校正（水平）",
+    rightCorrectedH: "右眼校正（水平）",
+    stability: "稳定度",
+    fovGaze: "视野注视",
+    notCalibrated: "未校准",
+    verticalEyeMovement: "垂直眼动",
+    horizontalEyeMovement: "水平眼动",
+    switchTo: "切换至{mode}",
+    sourceRaw: "原始",
+    sourceIsolated: "校正后",
+    correctedTitle: "校正后眼动",
+    correctedSubtitle: "扣除头部旋转后的眼球转动。",
+    rawTitle: "原始眼动",
+    rawSubtitle: "相对于目标、未经校正的眼动。",
+    leftEyeCorrected: "左眼（已校正）",
+    rightEyeCorrected: "右眼（已校正）",
+    leftEyeRaw: "左眼（原始）",
+    rightEyeRaw: "右眼（原始）",
+    targetPath: "目标路径",
+    targetPosition: "目标位置",
+    calibrationRequired: "需先完成校准才能绘制追踪数据。",
+    waitingSamples: "正在等待追踪样本…",
+    vergenceTracking: "聚散追踪",
+    vergenceRequired: "需先完成校准才能绘制聚散数据。",
+    waitingVergence: "正在等待聚散追踪样本…",
+    convergenceAngle: "聚合角度（度）",
+    gazeStability: "注视稳定度",
+    stabilityIndex: "稳定度指数",
+    headTilt: "头部倾斜（转动）",
+    rollDegrees: "翻滚（度）",
+    headPitchMovement: "头部俯仰（垂直）",
+    headYawMovement: "头部偏航（水平）",
+    headPitchDegrees: "俯仰（度）",
+    headYawDegrees: "偏航（度）",
+    headMovementSubtitle: "相对于环节基线的头部旋转。可与上方眼动图表对比。",
+    waitingHeadPose: "正在等待头部姿态样本…",
+    combinedHeadMovement: "合并头部运动（俯仰与偏航）",
+    headEyeVelocity: "头部与眼动速度",
+    headEyeVelocitySubtitle: "环节期间的角速度。",
+    headVelocity: "头部速度",
+    eyeVelocity: "眼动速度",
+    scrollToView: "滚动以查看完整记录",
+    shoulderVerticalMovement: "肩膀垂直移动",
+    shoulderHorizontalMovement: "肩膀水平移动",
+    shoulderMovementSubtitle: "相对于环节基线的左、右肩移动。",
+    waitingShoulderMovement: "正在等待肩膀移动样本…",
+    leftShoulder: "左肩",
+    rightShoulder: "右肩",
+  },
+};
+
+export function getCalibrationCopy(locale: Locale): CalibrationCopy {
+  return calibrationCopyByLocale[locale];
+}
+
+export function getAnalyticsCopy(locale: Locale): AnalyticsCopy {
+  return analyticsCopyByLocale[locale];
 }

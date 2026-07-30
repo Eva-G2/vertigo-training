@@ -1,21 +1,26 @@
 import type { ChartOptions } from "chart.js";
 import type { DeviationBounds } from "@/services/processing/degreesConversion";
+import { themeBlue, themeDarkBlue } from "@/lib/themeColors";
 
-export const ICS_CHART_COLORS = {
-  target: "#2949cc",
-  leftEye: "#10a69c",
-  rightEye: "#111d4d",
-  saccade: "#ef4444",
-  saccadeBorder: "#b91c1c",
-  grid: "#d8e0f0",
-  text: "#111d4d",
-} as const;
+export function getIcsChartColors() {
+  return {
+    target: themeBlue(),
+    leftEye: "#10a69c",
+    rightEye: themeDarkBlue(),
+    saccade: "#ef4444",
+    saccadeBorder: "#b91c1c",
+    grid: "#d8e0f0",
+    text: themeDarkBlue(),
+  };
+}
 
 export function buildIcsChartOptions(
   title: string,
   yBounds: DeviationBounds,
   maxTimeSec: number,
 ): ChartOptions<"line"> {
+  const colors = getIcsChartColors();
+
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -28,7 +33,7 @@ export function buildIcsChartOptions(
       legend: {
         position: "top",
         labels: {
-          color: ICS_CHART_COLORS.text,
+          color: colors.text,
           usePointStyle: true,
           boxWidth: 8,
         },
@@ -36,43 +41,34 @@ export function buildIcsChartOptions(
       title: {
         display: true,
         text: title,
-        color: ICS_CHART_COLORS.text,
+        color: colors.text,
         font: { size: 13, weight: "bold" },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context) => {
-            const value = context.parsed.y;
-            return `${context.dataset.label}: ${value?.toFixed(2)}°`;
-          },
-        },
       },
     },
     scales: {
       x: {
         type: "linear",
         min: 0,
-        max: Math.max(5, maxTimeSec + 0.5),
+        max: maxTimeSec,
         title: {
           display: true,
           text: "Time (s)",
-          color: ICS_CHART_COLORS.text,
+          color: colors.text,
         },
-        grid: { color: ICS_CHART_COLORS.grid },
-        ticks: { color: ICS_CHART_COLORS.text },
+        grid: { color: colors.grid },
+        ticks: { color: colors.text },
       },
       y: {
         min: yBounds.min,
         max: yBounds.max,
         title: {
           display: true,
-          text: "Degrees",
-          color: ICS_CHART_COLORS.text,
+          text: "Deviation (°)",
+          color: colors.text,
         },
-        grid: { color: ICS_CHART_COLORS.grid },
+        grid: { color: colors.grid },
         ticks: {
-          color: ICS_CHART_COLORS.text,
-          callback: (value) => `${value}°`,
+          color: colors.text,
         },
       },
     },

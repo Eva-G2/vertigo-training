@@ -3,6 +3,8 @@ import type { EyeMetrics, HeadPose, Point2D } from "@/types/eye-tracking";
 /** MediaPipe Face Mesh landmark indices for vestibular eye tracking. */
 export const LANDMARKS = {
   noseTip: 1,
+  /** Nasal root / nose bridge — sole landmark for VOR head velocity. */
+  nasalRoot: 168,
   chin: 152,
   forehead: 10,
   leftEyeOuter: 33,

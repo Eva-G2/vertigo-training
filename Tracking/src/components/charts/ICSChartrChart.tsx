@@ -14,29 +14,64 @@ import type { MovementComparisonRecord } from "@/services/processing";
 import "./chartSetup";
 import {
   buildIcsChartOptions,
-  ICS_CHART_COLORS,
+  getIcsChartColors,
 } from "./icsChartrChartConfig";
+import { useApp } from "@/components/providers/AppProvider";
 
 type Axis = "horizontal" | "vertical";
 
 function pickAxisValue(
   record: MovementComparisonRecord,
   axis: Axis,
-  source: "target" | "leftEye" | "rightEye",
+  source: "target" | "leftEye" | "rightEye" | "correctedLeftEye" | "correctedRightEye",
 ): number {
+  if (source === "target") {
+    const point = record.target;
+    return axis === "horizontal" ? point.x : point.y;
+  }
+
+  if (source === "correctedLeftEye" || source === "correctedRightEye") {
+    const point =
+      source === "correctedLeftEye"
+        ? record.correctedLeftEye
+        : record.correctedRightEye;
+    if (!point) {
+      const fallback = source === "correctedLeftEye" ? record.leftEye : record.rightEye;
+      return axis === "horizontal" ? fallback.x : fallback.y;
+    }
+    return axis === "horizontal" ? point.x : point.y;
+  }
+
   const point = record[source];
   return axis === "horizontal" ? point.x : point.y;
+}
+
+function eyeValueToChartDegrees(
+  value: number,
+  axis: Axis,
+  source: "target" | "leftEye" | "rightEye" | "correctedLeftEye" | "correctedRightEye",
+  stimulusAmplitude: number,
+): number {
+  if (
+    source === "correctedLeftEye" ||
+    source === "correctedRightEye"
+  ) {
+    return value;
+  }
+
+  return normalizedToDegrees(value, stimulusAmplitude);
 }
 
 function buildSaccadeDataset(
   saccades: SaccadeEvent[],
   axis: Axis,
   eye: "left" | "right",
+  colors: ReturnType<typeof getIcsChartColors>,
 ) {
   const filtered = saccades.filter((event) => event.eye === eye);
 
   return {
-    label: `Saccades (${eye})`,
+    label: `Saccades (${eye}, corrected)`,
     data: filtered.map((event) => ({
       x: elapsedSeconds(event.elapsedMs),
       y:
@@ -45,11 +80,11 @@ function buildSaccadeDataset(
     showLine: false,
     pointRadius: 8,
     pointHoverRadius: 10,
-    pointBackgroundColor: ICS_CHART_COLORS.saccade,
-    pointBorderColor: ICS_CHART_COLORS.saccadeBorder,
+    pointBackgroundColor: colors.saccade,
+    pointBorderColor: colors.saccadeBorder,
     pointBorderWidth: 2,
-    borderColor: ICS_CHART_COLORS.saccade,
-    backgroundColor: ICS_CHART_COLORS.saccade,
+    borderColor: colors.saccade,
+    backgroundColor: colors.saccade,
   };
 }
 
@@ -58,14 +93,17 @@ function buildAxisChartData(
   saccades: SaccadeEvent[],
   axis: Axis,
   stimulusAmplitude: number,
+  colors: ReturnType<typeof getIcsChartColors>,
 ): ChartData<"line"> {
   const toPoint = (
     record: MovementComparisonRecord,
-    source: "target" | "leftEye" | "rightEye",
+    source: "target" | "leftEye" | "rightEye" | "correctedLeftEye" | "correctedRightEye",
   ) => ({
     x: elapsedSeconds(record.elapsedMs),
-    y: normalizedToDegrees(
+    y: eyeValueToChartDegrees(
       pickAxisValue(record, axis, source),
+      axis,
+      source,
       stimulusAmplitude,
     ),
   });
@@ -75,33 +113,33 @@ function buildAxisChartData(
       {
         label: "Target path",
         data: records.map((record) => toPoint(record, "target")),
-        borderColor: ICS_CHART_COLORS.target,
-        backgroundColor: ICS_CHART_COLORS.target,
+        borderColor: colors.target,
+        backgroundColor: colors.target,
         borderWidth: 2,
         borderDash: [6, 4],
         pointRadius: 0,
         tension: 0.15,
       },
       {
-        label: "Left eye",
-        data: records.map((record) => toPoint(record, "leftEye")),
-        borderColor: ICS_CHART_COLORS.leftEye,
-        backgroundColor: ICS_CHART_COLORS.leftEye,
+        label: "Left eye (corrected)",
+        data: records.map((record) => toPoint(record, "correctedLeftEye")),
+        borderColor: colors.leftEye,
+        backgroundColor: colors.leftEye,
         borderWidth: 2,
         pointRadius: 0,
         tension: 0.15,
       },
       {
-        label: "Right eye",
-        data: records.map((record) => toPoint(record, "rightEye")),
-        borderColor: ICS_CHART_COLORS.rightEye,
-        backgroundColor: ICS_CHART_COLORS.rightEye,
+        label: "Right eye (corrected)",
+        data: records.map((record) => toPoint(record, "correctedRightEye")),
+        borderColor: colors.rightEye,
+        backgroundColor: colors.rightEye,
         borderWidth: 2,
         pointRadius: 0,
         tension: 0.15,
       },
-      buildSaccadeDataset(saccades, axis, "left"),
-      buildSaccadeDataset(saccades, axis, "right"),
+      buildSaccadeDataset(saccades, axis, "left", colors),
+      buildSaccadeDataset(saccades, axis, "right", colors),
     ],
   };
 }
@@ -123,6 +161,8 @@ function IcsAxisChart({
   yBounds,
   maxTimeSec,
 }: IcsAxisChartProps) {
+  const { theme } = useApp().state;
+
   const chartData = useMemo(
     () =>
       buildAxisChartData(
@@ -130,13 +170,14 @@ function IcsAxisChart({
         saccades,
         axis,
         DEFAULT_SINE_STIMULUS.amplitude,
+        getIcsChartColors(),
       ),
-    [records, saccades, axis],
+    [records, saccades, axis, theme],
   );
 
   const options = useMemo(
     () => buildIcsChartOptions(title, yBounds, maxTimeSec),
-    [title, yBounds, maxTimeSec],
+    [title, yBounds, maxTimeSec, theme],
   );
 
   return (

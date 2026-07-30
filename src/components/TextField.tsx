@@ -40,7 +40,7 @@ export function TextField({
         />
         {filled && (
           <Image
-            src="/icons/Check_filled.svg"
+            src="/icons/Check.svg"
             alt=""
             width={28}
             height={28}

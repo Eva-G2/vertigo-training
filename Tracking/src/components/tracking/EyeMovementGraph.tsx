@@ -1,11 +1,14 @@
 import { useEyeTracking } from "@/state";
-import { EyePositionChart } from "@/components/charts/EyePositionChart";
-import { GazeStabilityChart } from "@/components/charts/GazeStabilityChart";
-import { HeadTiltChart } from "@/components/charts/HeadTiltChart";
+import { CombinedHeadMovementGraph } from "./CombinedHeadMovementGraph";
+import { ShoulderMovementGraph } from "./ShoulderMovementGraph";
+import { TrackingGraph } from "./TrackingGraph";
+import { useTrackingDataStream } from "./trackingDataStream";
+import { type AnalyticsCopy, DEFAULT_ANALYTICS_COPY } from "./analyticsCopy";
 import "@/components/charts/chartSetup";
 
 type EyeMovementGraphProps = {
   className?: string;
+  copy?: AnalyticsCopy;
 };
 
 function MetricCard({ label, value }: { label: string; value: string }) {
@@ -22,77 +25,120 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 /**
  * Real-time eye movement charts and tracking statistics for analytics overlays.
  */
-export function EyeMovementGraph({ className = "" }: EyeMovementGraphProps) {
+export function EyeMovementGraph({
+  className = "",
+  copy = DEFAULT_ANALYTICS_COPY,
+}: EyeMovementGraphProps) {
   const { state } = useEyeTracking();
+  const trackingDataStream = useTrackingDataStream();
   const {
-    samples,
     latestSample,
     recordingStatus,
     pipelineStatus,
     movementRecordCount,
+    verticalPursuitRecordCount,
     calibration,
+    pursuitAxis,
+    samples,
   } = state;
 
   return (
     <section className={`flex flex-col gap-4 ${className}`}>
       <div className="flex flex-wrap gap-2 text-xs font-medium">
         <span className="rounded-full bg-cyan/15 px-3 py-1 text-cyan">
-          Pipeline: {pipelineStatus}
+          {copy.pipeline}: {pipelineStatus}
         </span>
         <span className="rounded-full bg-blue/10 px-3 py-1 text-blue">
-          Recording: {recordingStatus}
+          {copy.recording}: {recordingStatus}
         </span>
         <span className="rounded-full bg-dark-blue/10 px-3 py-1 text-dark-blue">
-          Samples: {samples.length}
+          {copy.samples}: {samples.length}
         </span>
         <span className="rounded-full bg-yellow/30 px-3 py-1 text-dark-blue">
-          Movement: {movementRecordCount}
+          {copy.movement}: {movementRecordCount}
         </span>
+        {verticalPursuitRecordCount > 0 && (
+          <span className="rounded-full bg-cyan/15 px-3 py-1 text-cyan">
+            {pursuitAxis === "vergence"
+              ? `${copy.vergence}: ${verticalPursuitRecordCount}`
+              : `${copy.vertical}: ${verticalPursuitRecordCount}`}
+          </span>
+        )}
         <span className="rounded-full bg-green-500/15 px-3 py-1 text-green-700">
-          Calibration: {calibration.isCalibrated ? "Injected" : "Pending"}
+          {copy.calibration}:{" "}
+          {calibration.isCalibrated ? copy.injected : copy.pending}
         </span>
       </div>
 
       {latestSample && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
-            label="Left gaze (H)"
+            label={copy.leftCorrectedH}
             value={
-              latestSample.leftCalibratedOffset && calibration.isCalibrated
-                ? `${latestSample.leftCalibratedOffset.horizontalDeg.toFixed(2)}°`
-                : latestSample.leftEye.horizontal.toFixed(3)
+              latestSample.leftEyeCorrected
+                ? `${latestSample.leftEyeCorrected.horizontal.toFixed(2)}°`
+                : latestSample.leftCalibratedOffset && calibration.isCalibrated
+                  ? `${latestSample.leftCalibratedOffset.horizontalDeg.toFixed(2)}°`
+                  : latestSample.leftEye.horizontal.toFixed(3)
             }
           />
           <MetricCard
-            label="Right gaze (H)"
+            label={copy.rightCorrectedH}
             value={
-              latestSample.rightCalibratedOffset && calibration.isCalibrated
-                ? `${latestSample.rightCalibratedOffset.horizontalDeg.toFixed(2)}°`
-                : latestSample.rightEye.horizontal.toFixed(3)
+              latestSample.rightEyeCorrected
+                ? `${latestSample.rightEyeCorrected.horizontal.toFixed(2)}°`
+                : latestSample.rightCalibratedOffset && calibration.isCalibrated
+                  ? `${latestSample.rightCalibratedOffset.horizontalDeg.toFixed(2)}°`
+                  : latestSample.rightEye.horizontal.toFixed(3)
             }
           />
           <MetricCard
-            label="Stability"
-            value={latestSample.gazeStability.toFixed(3)}
+            label={copy.stability}
+            value={
+              Number.isFinite(latestSample.gazeStability)
+                ? latestSample.gazeStability.toFixed(3)
+                : copy.pending
+            }
           />
           <MetricCard
-            label="FOV gaze"
+            label={copy.fovGaze}
             value={
               latestSample.fovGaze
                 ? `${latestSample.fovGaze.x.toFixed(2)}, ${latestSample.fovGaze.y.toFixed(2)}`
-                : "Not calibrated"
+                : copy.notCalibrated
             }
           />
         </div>
       )}
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <EyePositionChart
-          samples={samples}
-          isCalibrated={calibration.isCalibrated}
+      <div className="grid min-w-0 grid-cols-1 gap-4">
+        <TrackingGraph
+          axis="vertical"
+          data={trackingDataStream.vertical}
+          exerciseMode={pursuitAxis}
+          copy={copy}
         />
-        <GazeStabilityChart samples={samples} />
-        <HeadTiltChart samples={samples} className="lg:col-span-2" />
+        <TrackingGraph
+          axis="horizontal"
+          data={trackingDataStream.horizontal}
+          exerciseMode={pursuitAxis}
+          copy={copy}
+        />
+        {trackingDataStream.showShoulderMovement ? (
+          <ShoulderMovementGraph
+            data={trackingDataStream.shoulderMovement}
+            copy={copy}
+          />
+        ) : (
+          <CombinedHeadMovementGraph
+            data={trackingDataStream.headMovement}
+            verticalEye={trackingDataStream.vertical}
+            horizontalEye={trackingDataStream.horizontal}
+            headEyeVelocity={trackingDataStream.headEyeVelocity}
+            pursuitAxis={trackingDataStream.pursuitAxis}
+            copy={copy}
+          />
+        )}
       </div>
     </section>
   );

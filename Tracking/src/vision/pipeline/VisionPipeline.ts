@@ -1,4 +1,5 @@
 import type { TrackingService } from "@/services/tracking";
+import { TrackingStateManager } from "@/services/tracking/TrackingStateManager";
 import { FaceMeshProcessor } from "@/vision/mediapipe/FaceMeshProcessor";
 import { enhanceFrameForTracking } from "@/vision/opencv/imageProcessing";
 import { loadOpenCV } from "@/vision/opencv/OpenCVLoader";
@@ -107,6 +108,7 @@ export class VisionPipeline {
     if (!this.video || this.status !== "running") return;
 
     void this.processCurrentFrame().finally(() => {
+      if (!this.video || this.status !== "running") return;
       this.animationFrameId = requestAnimationFrame(this.tick);
     });
   };
@@ -133,15 +135,30 @@ export class VisionPipeline {
       const results = await this.faceMesh.processFrame(input);
       if (!results) return;
 
-      const sample = this.faceMesh.resultsToSample(results, timestamp);
       const rawLandmarks = results.multiFaceLandmarks?.[0] ?? null;
       const faceLandmarks = rawLandmarks
-        ? rawLandmarks.map((landmark) => ({
-            x: landmark.x,
-            y: landmark.y,
-            z: landmark.z,
-          }))
+        ? rawLandmarks.map((landmark) => {
+            const point = landmark as {
+              x: number;
+              y: number;
+              z?: number;
+              visibility?: number;
+              presence?: number;
+            };
+            return {
+              x: point.x,
+              y: point.y,
+              z: point.z,
+              visibility: point.visibility,
+              presence: point.presence,
+            };
+          })
         : null;
+
+      const sample = TrackingStateManager.isActive
+        ? this.faceMesh.resultsToSample(results, timestamp)
+        : null;
+
       const result: VisionPipelineResult = {
         sample,
         faceLandmarks,

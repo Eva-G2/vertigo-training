@@ -1,6 +1,7 @@
 import type { Results } from "@mediapipe/face_mesh";
 import type { EyeTrackingSample } from "@/types/eye-tracking";
 import { TrackingService } from "@/services/tracking";
+import { TrackingStateManager } from "@/services/tracking/TrackingStateManager";
 import {
   acquireFaceMesh,
   sendFaceMeshFrame,
@@ -70,7 +71,11 @@ export class FaceMeshProcessor {
     return sendFaceMeshFrame(image);
   }
 
-  resultsToSample(results: Results, timestamp: number): EyeTrackingSample {
+  resultsToSample(results: Results, timestamp: number): EyeTrackingSample | null {
+    if (!TrackingStateManager.isActive) {
+      return null;
+    }
+
     return this.trackingService.resultsToSample(results, timestamp);
   }
 

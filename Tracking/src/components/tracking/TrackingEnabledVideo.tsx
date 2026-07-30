@@ -1,24 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { OvalFaceTracker } from "./OvalFaceTracker";
+import { HeadSilhouetteOverlay } from "@/components/HeadSilhouetteOverlay";
+import { ShoulderPoseOverlay } from "@/components/ShoulderPoseOverlay";
+import { HeadAnchorOverlay } from "./HeadAnchorOverlay";
 import { IrisTracker } from "./IrisTracker";
 import { useBackgroundTracking } from "./useBackgroundTracking";
 import { TrackingAnalyticsModal } from "./TrackingAnalyticsModal";
+import { type AnalyticsCopy, DEFAULT_ANALYTICS_COPY } from "./analyticsCopy";
 import { useEyeTracking } from "@/state";
 import { useVisionPipeline } from "@/vision/hooks/useVisionPipeline";
 import { waitForVideoFrame } from "@/vision/utils/waitForVideoFrame";
+import type { GazeRecenterBaseline } from "@/services/tracking";
 import type { PrepCalibrationPayload } from "./injectPrepCalibration";
 
 type CameraState = "pending" | "prompt" | "active" | "denied" | "error";
 
 type TrackingEnabledVideoProps = {
   prepCalibration: PrepCalibrationPayload | null;
+  gazeRecenterBaseline?: GazeRecenterBaseline | null;
   overlayContent?: React.ReactNode;
   sessionLabel?: string;
   analyticsTitle: string;
   analyticsCloseLabel: string;
   analyticsToggleLabel: string;
+  /** Localized analytics-dashboard copy; defaults to English. */
+  analyticsCopy?: AnalyticsCopy;
   cameraDeniedLabel: string;
   cameraUnavailableLabel: string;
   cameraLoadingLabel: string;
@@ -28,25 +35,40 @@ type TrackingEnabledVideoProps = {
   }) => React.ReactNode;
   gameLayer?: React.ReactNode;
   autoStartRecording?: boolean;
+  /** When true, the camera feed is kept active for tracking but hidden from view. */
+  hideCameraPreview?: boolean;
+  /** When false, hides white Face Mesh landmark dots (green nasal root stays). */
+  showBoneLandmarks?: boolean;
+  /** When true, draws MediaPipe Pose shoulder landmarks as 2px white dots. */
+  showShoulderLandmarks?: boolean;
   className?: string;
+  /** Optional ref shared with the internal camera video element. */
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 };
 
 export function TrackingEnabledVideo({
   prepCalibration,
+  gazeRecenterBaseline = null,
   overlayContent,
   sessionLabel,
   analyticsTitle,
   analyticsCloseLabel,
   analyticsToggleLabel,
+  analyticsCopy = DEFAULT_ANALYTICS_COPY,
   cameraDeniedLabel,
   cameraUnavailableLabel,
   cameraLoadingLabel,
   renderCameraPermissionModal,
   gameLayer,
   autoStartRecording = true,
+  hideCameraPreview = false,
+  showBoneLandmarks = true,
+  showShoulderLandmarks = false,
   className = "",
+  videoRef: externalVideoRef,
 }: TrackingEnabledVideoProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const internalVideoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = externalVideoRef ?? internalVideoRef;
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraState, setCameraState] = useState<CameraState>(() => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices) {
@@ -67,6 +89,7 @@ export function TrackingEnabledVideo({
     trackingService,
     isRunning,
     prepCalibration,
+    gazeRecenterBaseline,
     sessionLabel,
     autoStartRecording,
   });
@@ -166,7 +189,7 @@ export function TrackingEnabledVideo({
   return (
     <>
       <div
-        className={`relative aspect-[4/3] w-full max-w-3xl overflow-hidden rounded-[20px] border-[3px] border-blue bg-card ${className}`}
+        className={`relative w-full overflow-hidden rounded-[20px] border-[3px] border-blue bg-card ${className || "aspect-[4/3]"}`}
       >
         <video
           ref={videoRef}
@@ -175,7 +198,7 @@ export function TrackingEnabledVideo({
           muted
           className={`h-full w-full -scale-x-100 object-cover ${
             cameraState === "active" ? "block" : "hidden"
-          }`}
+          } ${hideCameraPreview ? "pointer-events-none absolute opacity-0" : ""}`}
         />
 
         {(cameraState === "active" || cameraState === "pending") &&
@@ -185,7 +208,7 @@ export function TrackingEnabledVideo({
             </div>
           )}
 
-        {cameraState !== "active" && (
+        {cameraState !== "active" && !hideCameraPreview && (
           <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-dark-blue/20">
             <p className="px-6 text-center text-lg text-foreground/70">
               {cameraMessage}
@@ -193,22 +216,36 @@ export function TrackingEnabledVideo({
           </div>
         )}
 
+        {(cameraState === "active" || cameraState === "pending") &&
+          !hideCameraPreview && <HeadSilhouetteOverlay useHeadIcon />}
+
         {gameLayer}
 
-        {trackingActive && (
-          <>
-            <OvalFaceTracker
+        {trackingActive && !hideCameraPreview && (
+          <div className="pointer-events-none absolute inset-0 z-20">
+            <HeadAnchorOverlay
               videoRef={videoRef}
               landmarks={latestFaceLandmarks}
               active
+              showWhiteMeshDots={showBoneLandmarks}
             />
             <IrisTracker
               videoRef={videoRef}
               landmarks={latestFaceLandmarks}
               active
             />
-          </>
+          </div>
         )}
+
+        {showShoulderLandmarks &&
+          cameraState === "active" &&
+          !hideCameraPreview && (
+            <ShoulderPoseOverlay
+              videoRef={videoRef}
+              active
+              recording={trackingState.recordingStatus === "recording"}
+            />
+          )}
 
       </div>
 
@@ -226,6 +263,7 @@ export function TrackingEnabledVideo({
         open={analyticsOpen}
         title={analyticsTitle}
         closeLabel={analyticsCloseLabel}
+        copy={analyticsCopy}
         onClose={() => setAnalyticsOpen(false)}
       />
 

@@ -1,14 +1,17 @@
 import type { ChartJsMovementExport, MovementComparisonRecord } from "./types";
 import type { SineWaveStimulusConfig } from "./types";
+import { themeBlue, themeDarkBlue } from "@/lib/themeColors";
 
-const COLORS = {
-  targetX: "#2949cc",
-  leftX: "#10a69c",
-  rightX: "#111d4d",
-  targetY: "#2949cc",
-  leftY: "#10a69c",
-  rightY: "#111d4d",
-} as const;
+function chartColors() {
+  return {
+    targetX: themeBlue(),
+    leftX: "#10a69c",
+    rightX: themeDarkBlue(),
+    targetY: themeBlue(),
+    leftY: "#10a69c",
+    rightY: themeDarkBlue(),
+  };
+}
 
 function toDataset(
   label: string,
@@ -39,16 +42,18 @@ export function toChartJsMovementExport(
   sessionStartedAt: number,
   sessionEndedAt: number,
 ): ChartJsMovementExport {
+  const colors = chartColors();
+
   return {
     type: "line",
     data: {
       datasets: [
-        toDataset("Target X", records, (r) => r.target.x, COLORS.targetX),
-        toDataset("Left Eye X", records, (r) => r.leftEye.x, COLORS.leftX),
-        toDataset("Right Eye X", records, (r) => r.rightEye.x, COLORS.rightX),
-        toDataset("Target Y", records, (r) => r.target.y, COLORS.targetY),
-        toDataset("Left Eye Y", records, (r) => r.leftEye.y, COLORS.leftY),
-        toDataset("Right Eye Y", records, (r) => r.rightEye.y, COLORS.rightY),
+        toDataset("Target X", records, (r) => r.target.x, colors.targetX),
+        toDataset("Left Eye X", records, (r) => r.leftEye.x, colors.leftX),
+        toDataset("Right Eye X", records, (r) => r.rightEye.x, colors.rightX),
+        toDataset("Target Y", records, (r) => r.target.y, colors.targetY),
+        toDataset("Left Eye Y", records, (r) => r.leftEye.y, colors.leftY),
+        toDataset("Right Eye Y", records, (r) => r.rightEye.y, colors.rightY),
       ],
     },
     records,
