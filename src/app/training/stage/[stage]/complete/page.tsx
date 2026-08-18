@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
@@ -8,6 +9,7 @@ import { Card } from "@/components/Card";
 import { StageRecordsReport } from "@/components/StageRecordsReport";
 import { useApp } from "@/components/providers/AppProvider";
 import { formatStageStep, t } from "@/lib/i18n";
+import { upsertTrainingRecord } from "@/lib/supabase/training-records";
 import { getStageSteps, startNextStage } from "@/lib/training-flow";
 import type { Step } from "@/lib/types";
 
@@ -16,11 +18,24 @@ export default function StageCompletePage() {
   const params = useParams();
   const stage = Number(params.stage);
   const { state, updateTraining } = useApp();
-  const { locale, stepResults } = state;
+  const { locale, stepResults, stepAnalysis } = state;
   const steps = getStageSteps(stage);
 
+  useEffect(() => {
+    for (const step of getStageSteps(stage)) {
+      const metrics = stepResults[step];
+      if (!metrics) continue;
+      void upsertTrainingRecord({
+        stage,
+        step,
+        metrics,
+        analysis: stepAnalysis[step],
+      });
+    }
+  }, [stage, stepAnalysis, stepResults]);
+
   const handleReturnHome = () => {
-    router.push("/");
+    router.push("/home");
   };
 
   const handleRestart = () => {
@@ -71,8 +86,8 @@ export default function StageCompletePage() {
                     {formatStageStep(locale, stage, s)}
                   </span>
                   <span className="text-sm text-foreground/70">
-                    {result.completionPct}% · {result.accuracyPct}% ·{" "}
-                    {result.averageAngleDeg}°
+                  {result.completionPct}% · {result.accuracyPct}% ·{" "}
+                  {result.averageAngleDeg}°
                   </span>
                 </Link>
               );

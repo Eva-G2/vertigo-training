@@ -13,6 +13,7 @@ import {
 import { useApp } from "@/components/providers/AppProvider";
 import { formatStageStep, t } from "@/lib/i18n";
 import { onCongratsNext, onTrainingComplete } from "@/lib/training-flow";
+import { upsertTrainingRecord } from "@/lib/supabase/training-records";
 import {
   SHOULDER_ROTATION_CUE_TIMES_SEC,
   SHOULDER_UP_CUE_TIMES_SEC,
@@ -95,6 +96,12 @@ function StepTrainingPageContent() {
           analysisSnapshot,
         ),
       );
+      void upsertTrainingRecord({
+        stage,
+        step,
+        metrics: metricsWithTiming,
+        analysis: analysisSnapshot,
+      });
       setShowCongrats(true);
     },
     [state, stage, step, updateTraining],

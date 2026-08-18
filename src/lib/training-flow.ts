@@ -91,3 +91,58 @@ export function startNextStage(state: AppState, nextStage: number): AppState {
     stepAnalysis: {},
   };
 }
+
+/** True when every step of stages 1–3 has been completed in the current run. */
+export function isFullProgramComplete(state: AppState): boolean {
+  if (state.stage < 3) return false;
+  const steps = getStageSteps(3);
+  return steps.every((step) => state.stepResults[step] != null);
+}
+
+/**
+ * Next stage/step the user should train.
+ * If the current step is already completed (e.g. left after S1S2 congrats),
+ * advances to the following step (S1S3).
+ */
+export function getNextTrainingStep(
+  state: AppState,
+): { stage: number; step: Step } | null {
+  if (isFullProgramComplete(state)) return null;
+
+  const stage = Math.min(Math.max(state.stage, 1), 3);
+  const currentStep = state.step;
+  const currentDone = state.stepResults[currentStep] != null;
+
+  if (!currentDone) {
+    return { stage, step: currentStep };
+  }
+
+  if (!isLastStageStep(stage, currentStep)) {
+    return { stage, step: (currentStep + 1) as Step };
+  }
+
+  if (stage < 3) {
+    return { stage: stage + 1, step: 1 };
+  }
+
+  return null;
+}
+
+export function getNextTrainingRoute(state: AppState): string {
+  const next = getNextTrainingStep(state);
+  if (!next) {
+    return `/training/stage/${Math.min(Math.max(state.stage, 1), 3)}/complete`;
+  }
+
+  const startingStage =
+    next.step === 1 &&
+    (next.stage !== state.stage ||
+      state.phase === "prepare" ||
+      state.stepResults[1] == null);
+
+  if (startingStage) {
+    return `/training/stage/${next.stage}/prepare`;
+  }
+
+  return `/training/stage/${next.stage}/step/${next.step}/demo`;
+}

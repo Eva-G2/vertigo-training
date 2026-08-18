@@ -12,20 +12,22 @@ import {
 import type { AppState, AuthState, Locale } from "@/lib/types";
 import {
   initialState,
-  loadPersistedAuth,
   loadPersistedPreferences,
-  persistAuth,
   persistPreferences,
 } from "@/lib/state";
+import { authFromUser } from "@/lib/supabase/auth";
+import { createClient } from "@/lib/supabase/client";
+import { migrateLocalTrainingRecordsOnce } from "@/lib/supabase/training-records";
 
 type AppContextValue = {
   state: AppState;
+  authReady: boolean;
   setLocale: (locale: Locale) => void;
   toggleTheme: () => void;
   toggleSound: () => void;
   toggleBoneLandmarks: () => void;
-  setAuth: (auth: AuthState, token?: string) => void;
-  logout: () => void;
+  setAuth: (auth: AuthState) => void;
+  logout: () => Promise<void>;
   updateTraining: (partial: Partial<AppState>) => void;
   resetTraining: () => void;
   showLanguageModal: boolean;
@@ -35,16 +37,64 @@ type AppContextValue = {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+function resetTrainingFields(): Pick<
+  AppState,
+  | "stepResults"
+  | "stepAnalysis"
+  | "stage"
+  | "step"
+  | "phase"
+  | "stageStartedAt"
+> {
+  return {
+    stepResults: {},
+    stepAnalysis: {},
+    stage: 1,
+    step: 1,
+    phase: "prepare",
+    stageStartedAt: {},
+  };
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
+  const [authReady, setAuthReady] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   useEffect(() => {
     const prefs = loadPersistedPreferences();
-    const auth = loadPersistedAuth();
     // Hydrate client preferences after mount to avoid SSR/localStorage mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from localStorage
-    setState((prev) => ({ ...prev, ...prefs, auth }));
+    setState((prev) => ({ ...prev, ...prefs }));
+
+    const supabase = createClient();
+
+    void supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const auth = authFromUser(session?.user);
+      if (auth.status === "authenticated") {
+        await migrateLocalTrainingRecordsOnce(auth.userId);
+      }
+      setState((prev) => ({
+        ...prev,
+        auth,
+      }));
+      setAuthReady(true);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const auth = authFromUser(session?.user);
+      setState((prev) => ({
+        ...prev,
+        auth,
+      }));
+      if (auth.status === "authenticated") {
+        void migrateLocalTrainingRecordsOnce(auth.userId);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -88,23 +138,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const setAuth = useCallback((auth: AuthState, token?: string) => {
+  const setAuth = useCallback((auth: AuthState) => {
     setState((prev) => ({ ...prev, auth }));
-    persistAuth(auth, token);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     setState((prev) => ({
       ...prev,
       auth: { status: "anonymous" },
-      stepResults: {},
-      stepAnalysis: {},
-      stage: 1,
-      step: 1,
-      phase: "prepare",
-      stageStartedAt: {},
+      ...resetTrainingFields(),
     }));
-    persistAuth({ status: "anonymous" });
   }, []);
 
   const updateTraining = useCallback((partial: Partial<AppState>) => {
@@ -114,18 +159,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const resetTraining = useCallback(() => {
     setState((prev) => ({
       ...prev,
-      stage: 1,
-      step: 1,
-      phase: "prepare",
-      stageStartedAt: {},
-      stepResults: {},
-      stepAnalysis: {},
+      ...resetTrainingFields(),
     }));
   }, []);
 
   const value = useMemo(
     () => ({
       state,
+      authReady,
       setLocale,
       toggleTheme,
       toggleSound,
@@ -140,6 +181,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      authReady,
       setLocale,
       toggleTheme,
       toggleSound,

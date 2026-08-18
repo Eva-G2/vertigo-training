@@ -9,11 +9,12 @@ import { Card } from "@/components/Card";
 import { TextField } from "@/components/TextField";
 import { useApp } from "@/components/providers/AppProvider";
 import { t } from "@/lib/i18n";
-import { onPrepareStart } from "@/lib/training-flow";
+import { authFromUser } from "@/lib/supabase/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { state, setAuth, updateTraining } = useApp();
+  const { state, setAuth } = useApp();
   const { locale } = state;
 
   const [username, setUsername] = useState("");
@@ -26,26 +27,25 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
+      const supabase = createClient();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword(
+        {
+          email: username.trim(),
+          password,
+        },
+      );
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Login failed");
+      if (signInError) {
+        throw new Error(signInError.message);
       }
 
-      const data = await res.json();
-      const auth = {
-        status: "authenticated" as const,
-        userId: data.user.id,
-        displayName: data.user.displayName,
-      };
-      setAuth(auth, data.token);
-      updateTraining(onPrepareStart({ ...state, auth }));
-      router.push("/training/stage/1/prepare");
+      if (!data.user) {
+        throw new Error("Login failed");
+      }
+
+      const auth = authFromUser(data.user);
+      setAuth(auth);
+      router.push("/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

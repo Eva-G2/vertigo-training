@@ -12,6 +12,7 @@
     "@mediapipe/face_mesh": "0.4.1633559619",
     "@mediapipe/hands": "0.4.1646424915",
     "@mediapipe/pose": "0.5.1675469404",
+    "@supabase/supabase-js": "^2.112.2",
     "chart.js": "^4.5.1",
     "html2canvas-pro": "^2.3.2",
     "jspdf": "^4.2.1",

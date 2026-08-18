@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/Checkbox";
 import { TextField } from "@/components/TextField";
 import { useApp } from "@/components/providers/AppProvider";
 import { t } from "@/lib/i18n";
+import { authFromUser } from "@/lib/supabase/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -16,7 +18,7 @@ export default function SignupPage() {
   const { locale } = state;
 
   const [username, setUsername] = useState("");
-  const [field1, setField1] = useState("");
+  const [email, setEmail] = useState("");
   const [field2, setField2] = useState("");
   const [field3, setField3] = useState("");
   const [password, setPassword] = useState("");
@@ -29,26 +31,34 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, field1, field2, field3 }),
+      const trimmedEmail = email.trim();
+      const trimmedUsername = username.trim();
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: {
+          data: {
+            username: trimmedUsername,
+            display_name: trimmedUsername || trimmedEmail.split("@")[0] || trimmedEmail,
+            field1: trimmedEmail,
+            field2,
+            field3,
+          },
+        },
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Signup failed");
+      if (signUpError) {
+        throw new Error(signUpError.message);
       }
 
-      const data = await res.json();
-      setAuth(
-        {
-          status: "authenticated",
-          userId: data.user.id,
-          displayName: data.user.displayName,
-        },
-        data.token,
-      );
+      if (!data.session || !data.user) {
+        throw new Error(
+          "Account created. Please confirm your email before signing in.",
+        );
+      }
+
+      setAuth(authFromUser(data.user));
       router.push("/signup/success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
@@ -69,13 +79,16 @@ export default function SignupPage() {
             placeholder={t(locale, "placeholder")}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
           />
           <TextField
-            id="field1"
+            id="email"
             label={t(locale, "field1")}
             placeholder={t(locale, "placeholder")}
-            value={field1}
-            onChange={(e) => setField1(e.target.value)}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
           />
           <TextField
             id="field2"
@@ -98,6 +111,7 @@ export default function SignupPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
           />
 
           <p className="pt-2 text-sm leading-relaxed text-foreground/80">
@@ -121,7 +135,7 @@ export default function SignupPage() {
         <Button
           label={loading ? "..." : t(locale, "submit")}
           onClick={handleSubmit}
-          disabled={!terms || !username || !password || loading}
+          disabled={!terms || !username || !email.trim() || !password || loading}
         />
       </div>
     </AppShell>

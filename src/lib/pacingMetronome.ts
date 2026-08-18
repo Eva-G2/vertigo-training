@@ -51,11 +51,39 @@ export const WAIST_RIGHT_CUE_TIMES_SEC = Array.from(
   (_, index) => (index * WAIST_TURN_CYCLE_MS + WAIST_TURN_WAIT_MS) / 1000,
 );
 
-export const PACING_BEAT_MS = 1000;
-export const PACING_REST_MS = 500;
-export const PACING_CYCLE_MS = PACING_BEAT_MS + PACING_BEAT_MS + PACING_REST_MS;
+/** Stage 1 Step 3 vergence: wait after each beep, slowing to speeding. */
+export const PACING_WAIT_START_MS = 1000;
+export const PACING_WAIT_END_MS = 500;
 export const PACING_CYCLES = 20;
-export const PACING_TOTAL_MS = PACING_CYCLES * PACING_CYCLE_MS;
+
+/** Interpolates wait duration from 1000 ms (cycle 0) to 500 ms (last cycle). */
+export function vergenceWaitMsForCycle(cycleIndex: number): number {
+  if (PACING_CYCLES <= 1) {
+    return PACING_WAIT_END_MS;
+  }
+
+  const progress = cycleIndex / (PACING_CYCLES - 1);
+  return Math.round(
+    PACING_WAIT_START_MS +
+      (PACING_WAIT_END_MS - PACING_WAIT_START_MS) * progress,
+  );
+}
+
+export function vergenceCycleDurationMs(cycleIndex: number): number {
+  return vergenceWaitMsForCycle(cycleIndex) * 2;
+}
+
+export function computeVergenceTotalDurationMs(
+  cycles: number = PACING_CYCLES,
+): number {
+  let total = 0;
+  for (let cycle = 0; cycle < cycles; cycle += 1) {
+    total += vergenceCycleDurationMs(cycle);
+  }
+  return total;
+}
+
+export const PACING_TOTAL_MS = computeVergenceTotalDurationMs();
 
 import {
   HEAD_NOD_BEEP_DURATION_MS,
@@ -139,7 +167,9 @@ export type PacingLoopHandle = {
 };
 
 /**
- * Vergence pacing: Beep 1 (away) → 1000 ms → Beep 2 (toward) → 1000 ms → 500 ms rest → repeat.
+ * Stage 1 Step 3 vergence:
+ * Beep 1 (away) → wait → Beep 2 (toward) → wait → repeat.
+ * Wait duration linearly accelerates from 1000 ms to 500 ms over {@link cycles}.
  */
 export function startPacingLoop(
   cycles: number = PACING_CYCLES,
@@ -175,6 +205,8 @@ export function startPacingLoop(
         return;
       }
 
+      const waitMs = vergenceWaitMsForCycle(cycleIndex);
+
       playBeep(BEEP_AWAY_HZ);
       schedule(() => {
         if (cancelled) {
@@ -195,9 +227,9 @@ export function startPacingLoop(
             return;
           }
 
-          schedule(runCycle, PACING_REST_MS);
-        }, PACING_BEAT_MS);
-      }, PACING_BEAT_MS);
+          runCycle();
+        }, waitMs);
+      }, waitMs);
     };
 
     runCycle();

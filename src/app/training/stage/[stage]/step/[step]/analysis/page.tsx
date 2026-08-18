@@ -5,50 +5,17 @@ import { useParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/Card";
 import { StepAnalysisGraphs } from "@/components/StepAnalysisGraphs";
-import type { HeadMovementStreamSlice, ShoulderMovementStreamSlice } from "@/components/tracking";
 import { useApp } from "@/components/providers/AppProvider";
 import { formatStageStep, getAnalyticsCopy, t } from "@/lib/i18n";
 import {
   SHOULDER_ROTATION_CUE_TIMES_SEC,
   SHOULDER_UP_CUE_TIMES_SEC,
 } from "@/lib/pacingMetronome";
-import type {
-  Step,
-  StepAnalysisHeadMovementPoint,
-  StepAnalysisShoulderMovementPoint,
-} from "@/lib/types";
-
-function buildHeadMovementSlice(
-  points: StepAnalysisHeadMovementPoint[] | undefined,
-  showNoddingTarget: boolean | undefined,
-  showTurningTarget: boolean | undefined,
-): HeadMovementStreamSlice | undefined {
-  if (!points || points.length === 0) {
-    return undefined;
-  }
-
-  return {
-    points,
-    status: points.length >= 2 ? "ready" : "waiting",
-    showNoddingTarget: showNoddingTarget ?? false,
-    showTurningTarget: showTurningTarget ?? false,
-  };
-}
-
-function buildShoulderMovementSlice(
-  points: StepAnalysisShoulderMovementPoint[] | undefined,
-  cueTimesSec?: number[],
-): ShoulderMovementStreamSlice | undefined {
-  if (!points || points.length === 0) {
-    return undefined;
-  }
-
-  return {
-    points,
-    status: points.length >= 2 ? "ready" : "waiting",
-    liftCueTimesSec: cueTimesSec,
-  };
-}
+import {
+  buildHeadMovementSlice,
+  buildShoulderMovementSlice,
+} from "@/lib/step-analysis-view";
+import type { Step } from "@/lib/types";
 
 export default function StepAnalysisPage() {
   const params = useParams();

@@ -6,16 +6,14 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { useApp } from "@/components/providers/AppProvider";
 import { t } from "@/lib/i18n";
-import { onPrepareStart } from "@/lib/training-flow";
 
 export default function SignupSuccessPage() {
   const router = useRouter();
-  const { state, updateTraining } = useApp();
+  const { state } = useApp();
   const { locale } = state;
 
   const handleContinue = () => {
-    updateTraining(onPrepareStart(state));
-    router.push("/training/stage/1/prepare");
+    router.push("/home");
   };
 
   return (

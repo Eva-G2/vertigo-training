@@ -1,21 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type {
-  HeadMovementStreamSlice,
-  ShoulderMovementStreamSlice,
-} from "@/components/tracking";
 import { getAnalyticsCopy, formatStageStep, t } from "@/lib/i18n";
 import {
   SHOULDER_ROTATION_CUE_TIMES_SEC,
   SHOULDER_UP_CUE_TIMES_SEC,
 } from "@/lib/pacingMetronome";
 import { getStageSteps } from "@/lib/training-flow";
-import type {
-  Step,
-  StepAnalysisHeadMovementPoint,
-  StepAnalysisShoulderMovementPoint,
-} from "@/lib/types";
+import {
+  buildHeadMovementSlice,
+  buildShoulderMovementSlice,
+} from "@/lib/step-analysis-view";
+import type { Step } from "@/lib/types";
 import { Button } from "./Button";
 import { StepAnalysisGraphs } from "./StepAnalysisGraphs";
 import { useApp } from "./providers/AppProvider";
@@ -23,34 +19,6 @@ import { useApp } from "./providers/AppProvider";
 type StageRecordsReportProps = {
   stage: number;
 };
-
-function buildHeadMovementSlice(
-  points: StepAnalysisHeadMovementPoint[] | undefined,
-  showNoddingTarget: boolean | undefined,
-  showTurningTarget: boolean | undefined,
-): HeadMovementStreamSlice | undefined {
-  if (!points || points.length === 0) return undefined;
-
-  return {
-    points,
-    status: points.length >= 2 ? "ready" : "waiting",
-    showNoddingTarget: showNoddingTarget ?? false,
-    showTurningTarget: showTurningTarget ?? false,
-  };
-}
-
-function buildShoulderMovementSlice(
-  points: StepAnalysisShoulderMovementPoint[] | undefined,
-  cueTimesSec?: number[],
-): ShoulderMovementStreamSlice | undefined {
-  if (!points || points.length === 0) return undefined;
-
-  return {
-    points,
-    status: points.length >= 2 ? "ready" : "waiting",
-    liftCueTimesSec: cueTimesSec,
-  };
-}
 
 function formatStartedAt(locale: string, timestamp: number | undefined): string {
   if (timestamp == null) return "Not recorded";

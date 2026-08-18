@@ -58,6 +58,18 @@ type Copy = {
   demoInstruction: string;
   trainingInstruction: string;
   startTraining: string;
+  beginTrainingToday: string;
+  welcomeBack: string;
+  beganTrainingDaysAgo: string;
+  beganTrainingToday: string;
+  todayLabel: string;
+  doctorsNotes: string;
+  searchForRecord: string;
+  yearFilter: string;
+  monthFilter: string;
+  dateFilter: string;
+  details: string;
+  noMoreRecords: string;
   cameraPermissionTitle: string;
   cameraPermissionMessage: string;
   allowCamera: string;
@@ -134,6 +146,18 @@ const copy: Record<Locale, Copy> = {
     trainingInstruction:
       "Perform the head movement as shown. Stay within the target angles.",
     startTraining: "Start Training",
+    beginTrainingToday: "Begin Training Today!",
+    welcomeBack: "Welcome back {name}!",
+    beganTrainingDaysAgo: "Began training {n} days ago!",
+    beganTrainingToday: "Began training today!",
+    todayLabel: "Today!",
+    doctorsNotes: "Doctor's Notes:",
+    searchForRecord: "Search for record",
+    yearFilter: "Year",
+    monthFilter: "Month",
+    dateFilter: "Date",
+    details: "Details",
+    noMoreRecords: "No more records",
     cameraPermissionTitle: "Camera Access",
     cameraPermissionMessage:
       "Vertigo Training needs access to your camera to guide your head positioning during exercises.",
@@ -209,6 +233,18 @@ const copy: Record<Locale, Copy> = {
     demoInstruction: "開始練習前，請先觀看示範影片。",
     trainingInstruction: "請按照示範進行頭部動作，保持在目標角度範圍內。",
     startTraining: "開始訓練",
+    beginTrainingToday: "開始今天的訓練！",
+    welcomeBack: "{name}歡迎回來！",
+    beganTrainingDaysAgo: "已開始訓練 {n} 天！",
+    beganTrainingToday: "今天開始訓練！",
+    todayLabel: "今天！",
+    doctorsNotes: "醫生備註：",
+    searchForRecord: "搜尋紀錄",
+    yearFilter: "年",
+    monthFilter: "月",
+    dateFilter: "日",
+    details: "詳情",
+    noMoreRecords: "沒有更多紀錄",
     cameraPermissionTitle: "相機權限",
     cameraPermissionMessage: "Vertigo Training 需要存取您的相機，以在練習時引導頭部位置。",
     allowCamera: "允許相機",
@@ -279,6 +315,18 @@ const copy: Record<Locale, Copy> = {
     demoInstruction: "开始练习前，请先观看示范视频。",
     trainingInstruction: "请按照示范进行头部动作，保持在目标角度范围内。",
     startTraining: "开始训练",
+    beginTrainingToday: "开始今天的训练！",
+    welcomeBack: "{name}欢迎回来！",
+    beganTrainingDaysAgo: "已开始训练 {n} 天！",
+    beganTrainingToday: "今天开始训练！",
+    todayLabel: "今天！",
+    doctorsNotes: "医生备注：",
+    searchForRecord: "搜索记录",
+    yearFilter: "年",
+    monthFilter: "月",
+    dateFilter: "日",
+    details: "详情",
+    noMoreRecords: "没有更多记录",
     cameraPermissionTitle: "相机权限",
     cameraPermissionMessage: "Vertigo Training 需要访问您的相机，以在练习时引导头部位置。",
     allowCamera: "允许相机",
@@ -302,6 +350,114 @@ const copy: Record<Locale, Copy> = {
 
 export function t(locale: Locale, key: keyof Copy): string {
   return copy[locale][key];
+}
+
+export const WEEKDAY_SHORT: Record<Locale, string[]> = {
+  en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  "zh-Hant": ["日", "一", "二", "三", "四", "五", "六"],
+  "zh-Hans": ["日", "一", "二", "三", "四", "五", "六"],
+};
+
+export const WEEKDAY_LETTERS: Record<Locale, string[]> = {
+  en: ["S", "M", "T", "W", "T", "F", "S"],
+  "zh-Hant": ["日", "一", "二", "三", "四", "五", "六"],
+  "zh-Hans": ["日", "一", "二", "三", "四", "五", "六"],
+};
+
+export const MONTH_NAMES: Record<Locale, string[]> = {
+  en: [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ],
+  "zh-Hant": [
+    "一月",
+    "二月",
+    "三月",
+    "四月",
+    "五月",
+    "六月",
+    "七月",
+    "八月",
+    "九月",
+    "十月",
+    "十一月",
+    "十二月",
+  ],
+  "zh-Hans": [
+    "一月",
+    "二月",
+    "三月",
+    "四月",
+    "五月",
+    "六月",
+    "七月",
+    "八月",
+    "九月",
+    "十月",
+    "十一月",
+    "十二月",
+  ],
+};
+
+export function formatWelcomeBack(locale: Locale, name: string): string {
+  return copy[locale].welcomeBack.replace("{name}", name);
+}
+
+export function formatBeganTraining(locale: Locale, days: number): string {
+  if (days <= 0) return copy[locale].beganTrainingToday;
+  return copy[locale].beganTrainingDaysAgo.replace("{n}", String(days));
+}
+
+/** Short label for records list, e.g. "S1 - Smooth Pursuit (vertical)". */
+export function formatRecordStepLabel(
+  locale: Locale,
+  stage: number,
+  step: number,
+): string {
+  const full = formatStageStep(locale, stage, step);
+  const cleaned = full
+    .replace(/^Stage\s+\d+\s*:\s*Step\s+\d+\s*-?\s*/i, "")
+    .replace(/^Stage\s+\d+\s+Step\s+\d+\s*-\s*/i, "")
+    .replace(/^第[一二三1-3]級[：:]\s*第\d+部分\s*-\s*/, "")
+    .replace(/^第[一二三1-3]级[：:]\s*第\d+部分\s*-\s*/, "")
+    .trim();
+  return `S${step} - ${cleaned || full}`;
+}
+
+export function formatRecordMetrics(metrics: {
+  completionPct: number;
+  accuracyPct: number;
+  averageAngleDeg: number;
+  shoulderCompletionCount?: number;
+  shoulderMeanPeakLagSec?: number;
+  waistLeftTurnCount?: number;
+  waistRightTurnCount?: number;
+  waistMeanPeakLagSec?: number;
+}): string {
+  if (
+    metrics.waistLeftTurnCount != null &&
+    metrics.waistRightTurnCount != null &&
+    metrics.waistMeanPeakLagSec != null
+  ) {
+    return `${metrics.waistLeftTurnCount}/20 · ${metrics.waistRightTurnCount}/20 · ${metrics.waistMeanPeakLagSec.toFixed(1)}s`;
+  }
+  if (
+    metrics.shoulderCompletionCount != null &&
+    metrics.shoulderMeanPeakLagSec != null
+  ) {
+    return `${metrics.shoulderCompletionCount}/20 · ${metrics.shoulderMeanPeakLagSec.toFixed(1)}s`;
+  }
+  return `${metrics.completionPct}% · ${metrics.accuracyPct}% · ${metrics.averageAngleDeg}°`;
 }
 
 export function formatStagePrepare(locale: Locale, stage: number): string {

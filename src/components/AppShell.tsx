@@ -21,6 +21,8 @@ type AppShellProps = {
   showSound?: boolean;
   /** When false, hides the bone-landmark visibility toggle. Defaults to true. */
   showBoneLandmarkToggle?: boolean;
+  /** When true, locks the shell to the viewport height (no page scroll). */
+  lockViewport?: boolean;
 };
 
 export function AppShell({
@@ -28,6 +30,7 @@ export function AppShell({
   disableLogoLink = false,
   showSound = true,
   showBoneLandmarkToggle = true,
+  lockViewport = false,
 }: AppShellProps) {
   const {
     state,
@@ -40,19 +43,24 @@ export function AppShell({
     closeLanguageModal,
   } = useApp();
 
-  const { theme, sound, showBoneLandmarks } = state;
+  const { theme, sound, showBoneLandmarks, auth } = state;
   const isDark = theme === "dark";
+  const logoHref = auth.status === "authenticated" ? "/home" : "/";
 
   const logo = <AppLogo theme={theme} />;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex items-center justify-between px-8 py-6">
+    <div
+      className={`flex flex-col bg-background ${
+        lockViewport ? "h-dvh overflow-hidden" : "min-h-screen"
+      }`}
+    >
+      <header className="flex shrink-0 items-center justify-between px-8 py-6">
         <div id="logo">
           {disableLogoLink ? (
             <div className="cursor-default">{logo}</div>
           ) : (
-            <Link href="/" className="transition-opacity hover:opacity-80">
+            <Link href={logoHref} className="transition-opacity hover:opacity-80">
               {logo}
             </Link>
           )}
@@ -105,7 +113,11 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[1280px] min-h-0 flex-1 flex-col px-8 pb-8">
+      <main
+        className={`mx-auto flex w-full max-w-[1280px] min-h-0 flex-1 flex-col px-8 ${
+          lockViewport ? "overflow-hidden pb-4" : "pb-8"
+        }`}
+      >
         {children}
       </main>
 
