@@ -23,6 +23,7 @@ import { CameraPermissionModal } from "./CameraPermissionModal";
 import { LiveCameraStageFrame } from "./LiveCameraStageFrame";
 import { LIVE_VIDEO_FILL_CLASS } from "./LiveCameraPageLayout";
 import { SmoothPursuitGameOverlay } from "./SmoothPursuitGameOverlay";
+import { Stage3FollowVideo } from "./Stage3FollowVideo";
 import { useApp } from "./providers/AppProvider";
 import { useTestContext } from "./providers/TestContext";
 import { getAnalyticsCopy, t } from "@/lib/i18n";
@@ -306,6 +307,7 @@ function HeadExerciseInner({
   const startTimeRef = useRef<number | null>(null);
   const completedRef = useRef(false);
   const currentAngleRef = useRef(0);
+  const followVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const target = TARGET_ANGLES[step];
   const headNoddingMetronome = stage === 2 && step === 1;
@@ -486,6 +488,9 @@ function HeadExerciseInner({
                   trackingAreaVisible ? "contents" : "hidden h-full w-full"
                 }
               >
+                {shoulderMetronome ? (
+                  <Stage3FollowVideo videoRef={followVideoRef} />
+                ) : null}
                 <TrackingEnabledVideo
                   className={LIVE_VIDEO_FILL_CLASS}
                   prepCalibration={prepCalibration}
@@ -519,6 +524,9 @@ function HeadExerciseInner({
                       onProgress={setProgress}
                       onVisibleChange={setTrackingAreaVisible}
                       onRegisterHide={(hide) => onRegisterHideTracking?.(hide)}
+                      followVideoRef={
+                        shoulderMetronome ? followVideoRef : undefined
+                      }
                     />
                   }
                   renderCameraPermissionModal={({ onAllow, onDeny }) => (

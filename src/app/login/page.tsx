@@ -59,7 +59,7 @@ export default function LoginPage() {
         <Card className="flex w-full max-w-[600px] flex-col gap-6 px-8 py-10">
           <TextField
             id="username"
-            label={t(locale, "username")}
+            label={t(locale, "field1")}
             placeholder={t(locale, "placeholder")}
             value={username}
             onChange={(e) => setUsername(e.target.value)}

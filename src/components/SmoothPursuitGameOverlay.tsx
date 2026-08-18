@@ -41,6 +41,7 @@ import {
   type PacingLoopHandle,
 } from "@/lib/pacingMetronome";
 import { STAGE2_SESSION_DURATION_MS } from "@/lib/stage2Steps";
+import { STAGE3_STEP1_FOLLOW_LEAD_MS } from "@/lib/stage3Steps";
 import { HeadNodGuideTriangle } from "./HeadNodGuideTriangle";
 import { HeadTurnGuideTriangle } from "./HeadTurnGuideTriangle";
 import {
@@ -91,6 +92,8 @@ type SmoothPursuitGameOverlayProps = {
   onVisibleChange?: (visible: boolean) => void;
   onRegisterHide?: (hide: () => void) => void;
   onVideoDuration?: (durationSec: number) => void;
+  /** S3S1 follow-along clip; starts 26 frames before the first beep. */
+  followVideoRef?: React.RefObject<HTMLVideoElement | null>;
 };
 
 const COUNTDOWN_INTERVAL_MS = 500;
@@ -118,6 +121,7 @@ export function SmoothPursuitGameOverlay({
   onVisibleChange,
   onRegisterHide,
   onVideoDuration,
+  followVideoRef,
 }: SmoothPursuitGameOverlayProps) {
   const { state, showLanguageModal } = useApp();
   const { locale, theme } = state;
@@ -220,12 +224,27 @@ export function SmoothPursuitGameOverlay({
     stopPacingLoop();
   }, [stopPacingLoop]);
 
+  const resetFollowVideo = useCallback(() => {
+    const follow = followVideoRef?.current;
+    if (!follow) {
+      return;
+    }
+
+    follow.pause();
+    follow.currentTime = 0;
+  }, [followVideoRef]);
+
+  const stopFollowVideo = useCallback(() => {
+    followVideoRef?.current?.pause();
+  }, [followVideoRef]);
+
   const hideTracking = useCallback(() => {
     clearTimers();
+    stopFollowVideo();
     setIsAnimating(false);
     setIsVisible(false);
     onVisibleChange?.(false);
-  }, [clearTimers, onVisibleChange]);
+  }, [clearTimers, onVisibleChange, stopFollowVideo]);
 
   const getViewportPrimary = useCallback(() => {
     return isHorizontal ? window.innerWidth : window.innerHeight;
@@ -439,6 +458,7 @@ export function SmoothPursuitGameOverlay({
     setCountdownIndex(0);
     setIsAnimating(false);
     setPhase("countdown");
+    resetFollowVideo();
 
     COUNTDOWN_STEPS.forEach((_, index) => {
       if (index === 0) return;
@@ -447,6 +467,7 @@ export function SmoothPursuitGameOverlay({
 
     const goIndex = COUNTDOWN_STEPS.indexOf("go");
     const goEndMs = (goIndex + 1) * COUNTDOWN_INTERVAL_MS;
+    const firstBeepMs = goEndMs + DEFAULT_SMOOTH_PURSUIT_CHIRP.postGoDelayMs;
 
     schedule(() => {
       setCountdownIndex(0);
@@ -465,24 +486,42 @@ export function SmoothPursuitGameOverlay({
       setPhase("anchor");
     }, goEndMs);
 
+    if (followVideoRef?.current) {
+      schedule(() => {
+        const follow = followVideoRef.current;
+        if (!follow || completedRef.current) {
+          return;
+        }
+
+        void follow.play();
+      }, Math.max(0, firstBeepMs - STAGE3_STEP1_FOLLOW_LEAD_MS));
+    }
+
     if (!headNoddingMetronome && !headTurningMetronome) {
-      schedule(
-        startExercise,
-        goEndMs + DEFAULT_SMOOTH_PURSUIT_CHIRP.postGoDelayMs,
-      );
+      schedule(startExercise, firstBeepMs);
     }
   }, [
     buildChirp,
     centerMarker,
     clearTimers,
+    followVideoRef,
     getViewportPrimary,
     headNoddingMetronome,
     headTurningMetronome,
+    resetFollowVideo,
     schedule,
     startExercise,
     startHeadNoddingExercise,
     startHeadTurningExercise,
   ]);
+
+  useEffect(() => {
+    if (phase !== "complete") {
+      return;
+    }
+
+    stopFollowVideo();
+  }, [phase, stopFollowVideo]);
 
   useEffect(() => {
     centerMarker();
